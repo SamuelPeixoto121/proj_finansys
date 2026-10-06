@@ -1,0 +1,12 @@
+{
+  "name": "finansys",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma de simulação e gestão de operações de crédito",
+  "license": "MIT",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {}
+}
