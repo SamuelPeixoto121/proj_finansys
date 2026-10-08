@@ -5,7 +5,7 @@
   "description": "API do FinanSys",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/index.js"
