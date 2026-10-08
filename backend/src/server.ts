@@ -1,7 +1,6 @@
 import app from "./app.js";
+import { config } from "./config.js";
 
-const PORT = 3000;
-
-app.listen(PORT, () => {
-  console.log(`FinanSys API rodando na porta ${PORT}`);
+app.listen(config.port, () => {
+  console.log(`FinanSys API rodando na porta ${config.port}`);
 });
