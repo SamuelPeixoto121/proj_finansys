@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:migrate": "tsx src/migrate.ts"
+    "db:migrate": "tsx src/migrate.ts",
+    "test": "tsx --test tests/credit-calculator.test.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
