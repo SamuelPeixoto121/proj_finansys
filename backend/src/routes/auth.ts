@@ -1,8 +1,13 @@
+
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { pool } from "../database.js";
-import jwt from "jsonwebtoken";
+import {
+  requireAuth,
+  type AuthenticatedUser,
+} from "../middleware/require-auth.js";
 
 const router = Router();
 
@@ -16,6 +21,23 @@ interface LoginUser extends RowDataPacket {
   email: string;
   password_hash: string;
   role: "USER" | "ADMIN";
+}
+
+interface PublicUser extends RowDataPacket {
+  id: number;
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+}
+
+function getJwtSecret(): string | null {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret || secret.length < 32) {
+    return null;
+  }
+
+  return secret;
 }
 
 router.post("/api/v1/auth/register", async (request, response) => {
@@ -148,9 +170,9 @@ router.post("/api/v1/auth/login", async (request, response) => {
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
+    const jwtSecret = getJwtSecret();
 
-    if (!jwtSecret || jwtSecret.length < 32) {
+    if (!jwtSecret) {
       console.error("JWT_SECRET ausente ou muito curta.");
 
       response.status(500).json({
@@ -160,13 +182,12 @@ router.post("/api/v1/auth/login", async (request, response) => {
     }
 
     const accessToken = jwt.sign(
-      {
-        role: user.role,
-      },
+      { role: user.role },
       jwtSecret,
       {
         subject: String(user.id),
         expiresIn: "15m",
+        algorithm: "HS256",
       },
     );
 
@@ -191,5 +212,42 @@ router.post("/api/v1/auth/login", async (request, response) => {
   }
 });
 
+router.get("/api/v1/auth/me", requireAuth, async (_request, response) => {
+  const auth = response.locals.auth as AuthenticatedUser;
+
+  try {
+    const [users] = await pool.execute<PublicUser[]>(
+      `SELECT id, name, email, role
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+      [auth.userId],
+    );
+
+    const user = users[0];
+
+    if (!user) {
+      response.status(401).json({
+        error: "Usuário não encontrado.",
+      });
+      return;
+    }
+
+    response.status(200).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Erro ao consultar usuário autenticado:", error);
+
+    response.status(500).json({
+      error: "Não foi possível consultar o usuário.",
+    });
+  }
+});
 
 export default router;
