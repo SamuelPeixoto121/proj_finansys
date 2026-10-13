@@ -2,11 +2,20 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { pool } from "../database.js";
+import jwt from "jsonwebtoken";
 
 const router = Router();
 
 interface ExistingUser extends RowDataPacket {
   id: number;
+}
+
+interface LoginUser extends RowDataPacket {
+  id: number;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: "USER" | "ADMIN";
 }
 
 router.post("/api/v1/auth/register", async (request, response) => {
@@ -103,5 +112,84 @@ router.post("/api/v1/auth/register", async (request, response) => {
     });
   }
 });
+
+router.post("/api/v1/auth/login", async (request, response) => {
+  const { email, password } = request.body ?? {};
+
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    email.trim().length === 0 ||
+    password.length === 0
+  ) {
+    response.status(400).json({
+      error: "Informe o e-mail e a senha.",
+    });
+    return;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    const [users] = await pool.execute<LoginUser[]>(
+      `SELECT id, name, email, password_hash, role
+       FROM users
+       WHERE email = ?
+       LIMIT 1`,
+      [normalizedEmail],
+    );
+
+    const user = users[0];
+
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      response.status(401).json({
+        error: "E-mail ou senha inválidos.",
+      });
+      return;
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+
+    if (!jwtSecret || jwtSecret.length < 32) {
+      console.error("JWT_SECRET ausente ou muito curta.");
+
+      response.status(500).json({
+        error: "A autenticação não está configurada corretamente.",
+      });
+      return;
+    }
+
+    const accessToken = jwt.sign(
+      {
+        role: user.role,
+      },
+      jwtSecret,
+      {
+        subject: String(user.id),
+        expiresIn: "15m",
+      },
+    );
+
+    response.status(200).json({
+      message: "Login realizado com sucesso.",
+      accessToken,
+      tokenType: "Bearer",
+      expiresIn: 900,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Erro ao realizar login:", error);
+
+    response.status(500).json({
+      error: "Não foi possível realizar o login.",
+    });
+  }
+});
+
 
 export default router;
