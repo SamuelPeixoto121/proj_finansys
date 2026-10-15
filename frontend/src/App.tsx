@@ -20,6 +20,13 @@ interface MeResponse {
   user: User;
 }
 
+interface RegisterResponse {
+  message: string;
+  user: User;
+}
+
+type AuthMode = "login" | "register";
+
 const TOKEN_KEY = "finansys_access_token";
 
 async function readError(response: Response): Promise<string> {
@@ -32,12 +39,15 @@ async function readError(response: Response): Promise<string> {
 }
 
 export default function App() {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const token = sessionStorage.getItem(TOKEN_KEY);
@@ -68,7 +78,9 @@ export default function App() {
         setUser(data.user);
       } catch {
         if (!controller.signal.aborted) {
-          setError("Não foi possível conectar à API. Verifique se o backend está ligado.");
+          setError(
+            "Não foi possível conectar à API. Verifique se o backend está ligado.",
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -82,9 +94,17 @@ export default function App() {
     return () => controller.abort();
   }, []);
 
+  function changeMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setError("");
+    setSuccess("");
+    setPassword("");
+  }
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setSubmitting(true);
 
     try {
@@ -110,7 +130,59 @@ export default function App() {
       setUser(data.user);
       setPassword("");
     } catch {
-      setError("Não foi possível conectar à API. Verifique se o backend está ligado.");
+      setError(
+        "Não foi possível conectar à API. Verifique se o backend está ligado.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRegister(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (password.length < 8) {
+      setError("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    if (new TextEncoder().encode(password).length > 72) {
+      setError("A senha não pode ultrapassar 72 bytes.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch("/api/v1/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        setError(await readError(response));
+        return;
+      }
+
+      const data: RegisterResponse = await response.json();
+
+      setSuccess(`${data.message} Agora, entre com seu e-mail e senha.`);
+      setMode("login");
+      setName("");
+      setPassword("");
+    } catch {
+      setError(
+        "Não foi possível conectar à API. Verifique se o backend está ligado.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -119,9 +191,12 @@ export default function App() {
   function handleLogout() {
     sessionStorage.removeItem(TOKEN_KEY);
     setUser(null);
+    setName("");
     setEmail("");
     setPassword("");
     setError("");
+    setSuccess("");
+    setMode("login");
   }
 
   if (loading) {
@@ -139,7 +214,9 @@ export default function App() {
         <header className="topbar">
           <a className="brand" href="/" aria-label="FinanSys início">
             <span className="brand-icon">F</span>
-            <span>Finan<span className="brand-accent">Sys</span></span>
+            <span>
+              Finan<span className="brand-accent">Sys</span>
+            </span>
           </a>
 
           <button className="button button-outline" onClick={handleLogout}>
@@ -204,13 +281,17 @@ export default function App() {
     );
   }
 
+  const isRegister = mode === "register";
+
   return (
     <main className="login-layout">
       <section className="brand-panel">
         <div className="brand-panel-content">
           <a className="brand brand-light" href="/" aria-label="FinanSys">
             <span className="brand-icon">F</span>
-            <span>Finan<span className="brand-accent">Sys</span></span>
+            <span>
+              Finan<span className="brand-accent">Sys</span>
+            </span>
           </a>
 
           <div className="hero-copy">
@@ -235,16 +316,40 @@ export default function App() {
         <div className="login-card">
           <div className="mobile-brand">
             <span className="brand-icon">F</span>
-            <span>Finan<span className="brand-accent">Sys</span></span>
+            <span>
+              Finan<span className="brand-accent">Sys</span>
+            </span>
           </div>
 
-          <p className="eyebrow">BEM-VINDO DE VOLTA</p>
-          <h2>Acesse sua conta</h2>
+          <p className="eyebrow">
+            {isRegister ? "COMECE POR AQUI" : "BEM-VINDO DE VOLTA"}
+          </p>
+          <h2>{isRegister ? "Crie sua conta" : "Acesse sua conta"}</h2>
           <p className="form-description">
-            Entre com seus dados para continuar.
+            {isRegister
+              ? "Preencha seus dados para começar."
+              : "Entre com seus dados para continuar."}
           </p>
 
-          <form onSubmit={handleLogin}>
+          <form onSubmit={isRegister ? handleRegister : handleLogin}>
+            {isRegister && (
+              <>
+                <label htmlFor="name">Nome completo</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  minLength={2}
+                  maxLength={120}
+                  required
+                />
+              </>
+            )}
+
             <label htmlFor="email">E-mail</label>
             <input
               id="email"
@@ -254,20 +359,20 @@ export default function App() {
               placeholder="voce@exemplo.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              maxLength={255}
               required
             />
 
-            <div className="password-label-row">
-              <label htmlFor="password">Senha</label>
-            </div>
+            <label htmlFor="password">Senha</label>
             <input
               id="password"
               name="password"
               type="password"
-              autoComplete="current-password"
-              placeholder="Digite sua senha"
+              autoComplete={isRegister ? "new-password" : "current-password"}
+              placeholder={isRegister ? "Mínimo de 8 caracteres" : "Digite sua senha"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              minLength={isRegister ? 8 : undefined}
               required
             />
 
@@ -277,15 +382,36 @@ export default function App() {
               </p>
             )}
 
+            {success && (
+              <p className="success-message" role="status">
+                {success}
+              </p>
+            )}
+
             <button
               className="button button-primary login-button"
               type="submit"
               disabled={submitting}
             >
-              {submitting ? "Entrando..." : "Entrar na conta"}
+              {submitting
+                ? "Aguarde..."
+                : isRegister
+                  ? "Criar minha conta"
+                  : "Entrar na conta"}
               {!submitting && <span aria-hidden="true">→</span>}
             </button>
           </form>
+
+          <p className="auth-switch">
+            {isRegister ? "Já tem uma conta?" : "Ainda não tem uma conta?"}{" "}
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => changeMode(isRegister ? "login" : "register")}
+            >
+              {isRegister ? "Entrar" : "Cadastre-se"}
+            </button>
+          </p>
 
           <p className="security-note">
             <span aria-hidden="true">◆</span>
