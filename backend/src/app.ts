@@ -1,8 +1,9 @@
-
+﻿
 import express from "express";
 import authRouter from "./routes/auth.js";
 import modalitiesRouter from "./routes/modalities.js";
 import simulationsRouter from "./routes/simulations.js";
+import adminModalitiesRouter from "./routes/admin-modalities.js";
 
 const app = express();
 
@@ -18,5 +19,7 @@ app.get("/api/v1/health", (_request, response) => {
 app.use(authRouter);
 app.use(modalitiesRouter);
 app.use(simulationsRouter);
+app.use(adminModalitiesRouter);
 
 export default app;
+
