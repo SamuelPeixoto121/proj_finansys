@@ -14,3 +14,10 @@ coverage/
 Thumbs.db
 
 .vscode/
+
+# Backups locais e relatórios gerados à mão
+.backup-*/
+relatorio-*.txt
+
+# Cache do TypeScript
+*.tsbuildinfo

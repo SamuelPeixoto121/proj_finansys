@@ -972,3 +972,24 @@ button {
     font-size: 0.88rem;
   }
 }
+
+/* Ãrea administrativa de modalidades */
+.admin-modalities-panel { width: 100%; }
+.admin-help { color: var(--muted, #64748b); line-height: 1.6; margin-bottom: 1.5rem; }
+.admin-modality-form { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid var(--border, #e2e8f0); border-radius: 14px; margin: 1.25rem 0 2rem; }
+.admin-modality-form h3, .admin-table-heading h3 { margin: 0; }
+.admin-modality-form label { display: grid; gap: .45rem; font-weight: 600; }
+.admin-modality-form input, .admin-modality-form textarea { width: 100%; min-width: 0; padding: .75rem .85rem; border: 1px solid var(--border, #cbd5e1); border-radius: 9px; font: inherit; }
+.admin-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.admin-form-actions, .admin-table-heading, .admin-row-actions { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+.admin-table-heading { justify-content: space-between; margin-bottom: 1rem; }
+.admin-table-wrap { width: 100%; overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; text-align: left; }
+.admin-table th, .admin-table td { padding: .9rem .75rem; border-bottom: 1px solid var(--border, #e2e8f0); vertical-align: middle; }
+.admin-table th { font-size: .8rem; color: var(--muted, #64748b); text-transform: uppercase; letter-spacing: .04em; }
+.admin-table td small { display: block; color: var(--muted, #64748b); margin-top: .25rem; }
+.admin-status { display: inline-block; padding: .3rem .55rem; border-radius: 999px; font-size: .8rem; font-weight: 700; }
+.admin-status.active { background: #dcfce7; color: #166534; }
+.admin-status.inactive { background: #fee2e2; color: #991b1b; }
+.admin-row-actions button { white-space: nowrap; }
+@media (max-width: 700px) { .admin-form-grid { grid-template-columns: 1fr; } .admin-modality-form { padding: 1rem; } .admin-table th, .admin-table td { padding: .7rem .5rem; } }

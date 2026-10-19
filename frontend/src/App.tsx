@@ -65,7 +65,7 @@ interface HistoryResponse {
 }
 
 type AuthMode = "login" | "register";
-type DashboardView = "simulator" | "history" | "account";
+type DashboardView = "simulator" | "history" | "account" | "admin";
 
 const TOKEN_KEY = "finansys_access_token";
 
@@ -139,6 +139,22 @@ export default function App() {
   const [calculating, setCalculating] = useState(false);
   const [dashboardError, setDashboardError] = useState("");
   const [dashboardSuccess, setDashboardSuccess] = useState("");
+  const [adminModalities, setAdminModalities] = useState<Array<{
+    id: number; code: string; name: string; description: string | null;
+    limits: { minAmount: number; maxAmount: number; minTerm: number; maxTerm: number };
+    active: boolean; rateRangeCount: number;
+  }>>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [adminMessage, setAdminMessage] = useState("");
+  const [adminEditingCode, setAdminEditingCode] = useState<string | null>(null);
+  const [adminCode, setAdminCode] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminDescription, setAdminDescription] = useState("");
+  const [adminMinAmount, setAdminMinAmount] = useState("500");
+  const [adminMaxAmount, setAdminMaxAmount] = useState("50000");
+  const [adminMinTerm, setAdminMinTerm] = useState("3");
+  const [adminMaxTerm, setAdminMaxTerm] = useState("48");
 
   const selectedModality =
     modalities.find((modality) => modality.code === selectedCode) ?? null;
@@ -437,6 +453,121 @@ export default function App() {
     }
   }
 
+  async function loadAdminModalities() {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN") return;
+    setAdminLoading(true);
+    setAdminError("");
+    try {
+      const response = await fetch("/api/v1/admin/modalities", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(await readError(response));
+      const data: { modalities: typeof adminModalities } = await response.json();
+      setAdminModalities(data.modalities);
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Erro ao carregar modalidades.");
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  function resetAdminForm() {
+    setAdminEditingCode(null);
+    setAdminCode("");
+    setAdminName("");
+    setAdminDescription("");
+    setAdminMinAmount("500");
+    setAdminMaxAmount("50000");
+    setAdminMinTerm("3");
+    setAdminMaxTerm("48");
+  }
+
+  function editAdminModality(modality: typeof adminModalities[number]) {
+    setAdminEditingCode(modality.code);
+    setAdminCode(modality.code);
+    setAdminName(modality.name);
+    setAdminDescription(modality.description ?? "");
+    setAdminMinAmount(String(modality.limits.minAmount));
+    setAdminMaxAmount(String(modality.limits.maxAmount));
+    setAdminMinTerm(String(modality.limits.minTerm));
+    setAdminMaxTerm(String(modality.limits.maxTerm));
+    setAdminMessage("");
+    setAdminError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function submitAdminModality(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN") return;
+    setAdminError("");
+    setAdminMessage("");
+    const payload = {
+      name: adminName,
+      description: adminDescription,
+      minAmount: Number(adminMinAmount),
+      maxAmount: Number(adminMaxAmount),
+      minTerm: Number(adminMinTerm),
+      maxTerm: Number(adminMaxTerm),
+    };
+    if (!adminEditingCode) Object.assign(payload, { code: adminCode.trim().toUpperCase() });
+    try {
+      const response = await fetch(
+        adminEditingCode
+          ? `/api/v1/admin/modalities/${encodeURIComponent(adminEditingCode)}`
+          : "/api/v1/admin/modalities",
+        {
+          method: adminEditingCode ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!response.ok) throw new Error(await readError(response));
+      const data: { message: string } = await response.json();
+      setAdminMessage(data.message);
+      resetAdminForm();
+      await loadAdminModalities();
+      if (adminEditingCode === null) {
+        // A criação não cria taxas; a mensagem da API explica o próximo passo.
+      }
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Não foi possível salvar a modalidade.");
+    }
+  }
+
+  async function toggleAdminModality(code: string, active: boolean) {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN") return;
+    setAdminError("");
+    setAdminMessage("");
+    try {
+      const response = await fetch(
+        `/api/v1/admin/modalities/${encodeURIComponent(code)}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ active }),
+        },
+      );
+      if (!response.ok) throw new Error(await readError(response));
+      const data: { message: string } = await response.json();
+      setAdminMessage(data.message);
+      await loadAdminModalities();
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Não foi possível alterar o status.");
+    }
+  }
+
+  useEffect(() => {
+    if (view === "admin" && user?.role === "ADMIN") void loadAdminModalities();
+  }, [view, user?.role]);
   function handleLogout() {
     sessionStorage.removeItem(TOKEN_KEY);
     setUser(null);
@@ -522,6 +653,14 @@ export default function App() {
           >
             Minha conta
           </button>
+          {user.role === "ADMIN" && (
+            <button
+              className={`nav-tab ${view === "admin" ? "active" : ""}`}
+              onClick={() => setView("admin")}
+            >
+              Administração
+            </button>
+          )}
         </nav>
 
         {dashboardError && (
@@ -746,6 +885,73 @@ export default function App() {
           </section>
         )}
 
+        {view === "admin" && user.role === "ADMIN" && (
+          <section className="info-card admin-modalities-panel">
+            <p className="eyebrow">PAINEL ADMINISTRATIVO</p>
+            <h2>Gerenciar modalidades de crédito</h2>
+            <p className="admin-help">
+              Criar uma modalidade não configura automaticamente as taxas de juros. Ela só poderá ser simulada depois que suas faixas de juros forem cadastradas.
+            </p>
+            {adminError && <p className="form-message error-message" role="alert">{adminError}</p>}
+            {adminMessage && <p className="form-message success-message" role="status">{adminMessage}</p>}
+
+            <form className="admin-modality-form" onSubmit={submitAdminModality}>
+              <h3>{adminEditingCode ? `Editar ${adminEditingCode}` : "Nova modalidade"}</h3>
+              {!adminEditingCode && (
+                <label>
+                  Código único
+                  <input value={adminCode} onChange={(event) => setAdminCode(event.target.value.toUpperCase())}
+                    placeholder="EX: CONSIGNADO" pattern="[A-Za-z][A-Za-z0-9_]{1,49}" required maxLength={50} />
+                </label>
+              )}
+              <label>
+                Nome
+                <input value={adminName} onChange={(event) => setAdminName(event.target.value)} required minLength={2} maxLength={120} />
+              </label>
+              <label>
+                Descrição
+                <textarea value={adminDescription} onChange={(event) => setAdminDescription(event.target.value)} maxLength={2000} rows={3} />
+              </label>
+              <div className="admin-form-grid">
+                <label>Valor mínimo (R$)<input type="number" min="0.01" step="0.01" value={adminMinAmount} onChange={(event) => setAdminMinAmount(event.target.value)} required /></label>
+                <label>Valor máximo (R$)<input type="number" min="0.01" step="0.01" value={adminMaxAmount} onChange={(event) => setAdminMaxAmount(event.target.value)} required /></label>
+                <label>Prazo mínimo (meses)<input type="number" min="1" step="1" value={adminMinTerm} onChange={(event) => setAdminMinTerm(event.target.value)} required /></label>
+                <label>Prazo máximo (meses)<input type="number" min="1" step="1" value={adminMaxTerm} onChange={(event) => setAdminMaxTerm(event.target.value)} required /></label>
+              </div>
+              <div className="admin-form-actions">
+                <button className="primary-button" type="submit">{adminEditingCode ? "Salvar alterações" : "Criar modalidade"}</button>
+                {adminEditingCode && <button className="secondary-button" type="button" onClick={resetAdminForm}>Cancelar edição</button>}
+              </div>
+            </form>
+
+            <div className="admin-table-heading">
+              <h3>Modalidades cadastradas</h3>
+              <button className="secondary-button" type="button" onClick={() => void loadAdminModalities()}>Atualizar lista</button>
+            </div>
+            {adminLoading ? <p>Carregando modalidades...</p> : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Modalidade</th><th>Limites</th><th>Taxas</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody>
+                    {adminModalities.map((modality) => (
+                      <tr key={modality.id}>
+                        <td><strong>{modality.name}</strong><small>{modality.code}</small></td>
+                        <td>{formatCurrency(modality.limits.minAmount)} – {formatCurrency(modality.limits.maxAmount)}<small>{modality.limits.minTerm}–{modality.limits.maxTerm} meses</small></td>
+                        <td>{modality.rateRangeCount} faixa(s)</td>
+                        <td><span className={modality.active ? "admin-status active" : "admin-status inactive"}>{modality.active ? "Ativa" : "Inativa"}</span></td>
+                        <td><div className="admin-row-actions">
+                          <button className="secondary-button" type="button" onClick={() => editAdminModality(modality)}>Editar</button>
+                          <button className="secondary-button" type="button" onClick={() => void toggleAdminModality(modality.code, !modality.active)}>{modality.active ? "Desativar" : "Ativar"}</button>
+                        </div></td>
+                      </tr>
+                    ))}
+                    {adminModalities.length === 0 && <tr><td colSpan={5}>Nenhuma modalidade cadastrada.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
         {view === "account" && (
           <section className="info-card account-card account-page">
             <p className="eyebrow">SEUS DADOS</p>
