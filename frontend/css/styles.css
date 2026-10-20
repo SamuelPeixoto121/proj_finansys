@@ -973,7 +973,7 @@ button {
   }
 }
 
-/* Ãrea administrativa de modalidades */
+/* Área administrativa de modalidades */
 .admin-modalities-panel { width: 100%; }
 .admin-help { color: var(--muted, #64748b); line-height: 1.6; margin-bottom: 1.5rem; }
 .admin-modality-form { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid var(--border, #e2e8f0); border-radius: 14px; margin: 1.25rem 0 2rem; }
@@ -993,3 +993,49 @@ button {
 .admin-status.inactive { background: #fee2e2; color: #991b1b; }
 .admin-row-actions button { white-space: nowrap; }
 @media (max-width: 700px) { .admin-form-grid { grid-template-columns: 1fr; } .admin-modality-form { padding: 1rem; } .admin-table th, .admin-table td { padding: .7rem .5rem; } }
+
+/* Botões do painel administrativo: mesmo visual de .button-primary e .button-outline */
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.primary-button {
+  color: #10251c;
+  background: var(--green);
+}
+
+.primary-button:hover:not(:disabled) {
+  background: #8fe3af;
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  border-color: #dce2ea;
+  color: #344054;
+  background: #fff;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #f0f3f7;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.admin-row-actions button {
+  min-height: 36px;
+  padding: 0 14px;
+}
