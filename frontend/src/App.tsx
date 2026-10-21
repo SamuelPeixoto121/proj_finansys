@@ -64,6 +64,23 @@ interface HistoryResponse {
   simulations: Simulation[];
 }
 
+interface AdminRateRange {
+  id: number;
+  minTerm: number;
+  maxTerm: number;
+  monthlyRatePercent: number;
+  active: boolean;
+}
+
+interface AdminRatesResponse {
+  modality: {
+    code: string;
+    name: string;
+    limits: { minTerm: number; maxTerm: number };
+  };
+  rateRanges: AdminRateRange[];
+}
+
 type AuthMode = "login" | "register";
 type DashboardView = "simulator" | "history" | "account" | "admin";
 
@@ -76,6 +93,11 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 const numberFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2,
+});
+
+const rateFormatter = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
 });
 
 function formatCurrency(value: number): string {
@@ -155,6 +177,15 @@ export default function App() {
   const [adminMaxAmount, setAdminMaxAmount] = useState("50000");
   const [adminMinTerm, setAdminMinTerm] = useState("3");
   const [adminMaxTerm, setAdminMaxTerm] = useState("48");
+  const [ratesCode, setRatesCode] = useState<string | null>(null);
+  const [ratesData, setRatesData] = useState<AdminRatesResponse | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [rateError, setRateError] = useState("");
+  const [rateMessage, setRateMessage] = useState("");
+  const [rateEditingId, setRateEditingId] = useState<number | null>(null);
+  const [rateMinTerm, setRateMinTerm] = useState("");
+  const [rateMaxTerm, setRateMaxTerm] = useState("");
+  const [rateMonthly, setRateMonthly] = useState("");
 
   const selectedModality =
     modalities.find((modality) => modality.code === selectedCode) ?? null;
@@ -565,6 +596,120 @@ export default function App() {
     }
   }
 
+  function resetRateForm() {
+    setRateEditingId(null);
+    setRateMinTerm("");
+    setRateMaxTerm("");
+    setRateMonthly("");
+  }
+
+  async function loadRateRanges(code: string) {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN") return;
+    setRatesLoading(true);
+    try {
+      const response = await fetch(
+        `/api/v1/admin/modalities/${encodeURIComponent(code)}/rates`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!response.ok) throw new Error(await readError(response));
+      const data: AdminRatesResponse = await response.json();
+      setRatesData(data);
+    } catch (err) {
+      setRateError(err instanceof Error ? err.message : "Erro ao carregar as faixas de juros.");
+    } finally {
+      setRatesLoading(false);
+    }
+  }
+
+  async function openRateRanges(code: string) {
+    setRatesCode(code);
+    setRatesData(null);
+    setRateError("");
+    setRateMessage("");
+    resetRateForm();
+    await loadRateRanges(code);
+  }
+
+  function closeRateRanges() {
+    setRatesCode(null);
+    setRatesData(null);
+    setRateError("");
+    setRateMessage("");
+    resetRateForm();
+  }
+
+  function editRateRange(range: AdminRateRange) {
+    setRateEditingId(range.id);
+    setRateMinTerm(String(range.minTerm));
+    setRateMaxTerm(String(range.maxTerm));
+    setRateMonthly(String(range.monthlyRatePercent));
+    setRateError("");
+    setRateMessage("");
+  }
+
+  async function submitRateRange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN" || !ratesCode) return;
+    setRateError("");
+    setRateMessage("");
+    const payload = {
+      minTerm: Number(rateMinTerm),
+      maxTerm: Number(rateMaxTerm),
+      monthlyRatePercent: Number(rateMonthly),
+    };
+    const base = `/api/v1/admin/modalities/${encodeURIComponent(ratesCode)}/rates`;
+    try {
+      const response = await fetch(
+        rateEditingId === null ? base : `${base}/${rateEditingId}`,
+        {
+          method: rateEditingId === null ? "POST" : "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!response.ok) throw new Error(await readError(response));
+      const data: { message: string } = await response.json();
+      setRateMessage(data.message);
+      resetRateForm();
+      await loadRateRanges(ratesCode);
+      await loadAdminModalities();
+    } catch (err) {
+      setRateError(err instanceof Error ? err.message : "Não foi possível salvar a faixa de juros.");
+    }
+  }
+
+  async function toggleRateRange(range: AdminRateRange) {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN" || !ratesCode) return;
+    setRateError("");
+    setRateMessage("");
+    try {
+      const response = await fetch(
+        `/api/v1/admin/modalities/${encodeURIComponent(ratesCode)}/rates/${range.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ active: !range.active }),
+        },
+      );
+      if (!response.ok) throw new Error(await readError(response));
+      const data: { message: string } = await response.json();
+      setRateMessage(data.message);
+      await loadRateRanges(ratesCode);
+      await loadAdminModalities();
+    } catch (err) {
+      setRateError(err instanceof Error ? err.message : "Não foi possível alterar o status da faixa.");
+    }
+  }
+
   useEffect(() => {
     if (view === "admin" && user?.role === "ADMIN") void loadAdminModalities();
   }, [view, user?.role]);
@@ -941,6 +1086,7 @@ export default function App() {
                         <td><span className={modality.active ? "admin-status active" : "admin-status inactive"}>{modality.active ? "Ativa" : "Inativa"}</span></td>
                         <td><div className="admin-row-actions">
                           <button className="secondary-button" type="button" onClick={() => editAdminModality(modality)}>Editar</button>
+                          <button className="secondary-button" type="button" onClick={() => void openRateRanges(modality.code)}>Faixas de juros</button>
                           <button className="secondary-button" type="button" onClick={() => void toggleAdminModality(modality.code, !modality.active)}>{modality.active ? "Desativar" : "Ativar"}</button>
                         </div></td>
                       </tr>
@@ -948,6 +1094,57 @@ export default function App() {
                     {adminModalities.length === 0 && <tr><td colSpan={5}>Nenhuma modalidade cadastrada.</td></tr>}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {ratesCode && (
+              <div className="admin-rates-panel">
+                <div className="admin-table-heading">
+                  <h3>Faixas de juros{ratesData ? ` – ${ratesData.modality.name}` : ""}</h3>
+                  <button className="secondary-button" type="button" onClick={closeRateRanges}>Fechar</button>
+                </div>
+                {ratesData && (
+                  <p className="admin-help">
+                    Prazos permitidos nesta modalidade: {ratesData.modality.limits.minTerm}–{ratesData.modality.limits.maxTerm} meses. As faixas ativas não podem se sobrepor.
+                  </p>
+                )}
+                {rateError && <p className="form-message error-message" role="alert">{rateError}</p>}
+                {rateMessage && <p className="form-message success-message" role="status">{rateMessage}</p>}
+
+                <form className="admin-modality-form" onSubmit={submitRateRange}>
+                  <h3>{rateEditingId === null ? "Nova faixa" : "Editar faixa"}</h3>
+                  <div className="admin-form-grid admin-rate-grid">
+                    <label>Prazo mínimo (meses)<input type="number" min={ratesData?.modality.limits.minTerm ?? 1} max={ratesData?.modality.limits.maxTerm} step="1" value={rateMinTerm} onChange={(event) => setRateMinTerm(event.target.value)} required /></label>
+                    <label>Prazo máximo (meses)<input type="number" min={ratesData?.modality.limits.minTerm ?? 1} max={ratesData?.modality.limits.maxTerm} step="1" value={rateMaxTerm} onChange={(event) => setRateMaxTerm(event.target.value)} required /></label>
+                    <label>Taxa mensal (% ao mês)<input type="number" min="0" max="100" step="0.0001" value={rateMonthly} onChange={(event) => setRateMonthly(event.target.value)} required /></label>
+                  </div>
+                  <div className="admin-form-actions">
+                    <button className="primary-button" type="submit">{rateEditingId === null ? "Criar faixa" : "Salvar alterações"}</button>
+                    {rateEditingId !== null && <button className="secondary-button" type="button" onClick={resetRateForm}>Cancelar edição</button>}
+                  </div>
+                </form>
+
+                {ratesLoading ? <p>Carregando faixas de juros...</p> : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead><tr><th>Prazo</th><th>Taxa mensal</th><th>Status</th><th>Ações</th></tr></thead>
+                      <tbody>
+                        {ratesData?.rateRanges.map((range) => (
+                          <tr key={range.id}>
+                            <td>{range.minTerm}–{range.maxTerm} meses</td>
+                            <td>{rateFormatter.format(range.monthlyRatePercent)}% ao mês</td>
+                            <td><span className={range.active ? "admin-status active" : "admin-status inactive"}>{range.active ? "Ativa" : "Inativa"}</span></td>
+                            <td><div className="admin-row-actions">
+                              <button className="secondary-button" type="button" onClick={() => editRateRange(range)}>Editar</button>
+                              <button className="secondary-button" type="button" onClick={() => void toggleRateRange(range)}>{range.active ? "Desativar" : "Ativar"}</button>
+                            </div></td>
+                          </tr>
+                        ))}
+                        {ratesData && ratesData.rateRanges.length === 0 && <tr><td colSpan={4}>Nenhuma faixa cadastrada. Sem faixas ativas, esta modalidade não pode ser simulada.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </section>
