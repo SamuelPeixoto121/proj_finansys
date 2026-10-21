@@ -22,4 +22,8 @@ app.use(simulationsRouter);
 app.use(adminModalitiesRouter);
 app.use(adminRateRangesRouter);
 
+app.use((_request, response) => {
+  response.status(404).json({ error: "Rota não encontrada." });
+});
+
 export default app;

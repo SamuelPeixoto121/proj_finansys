@@ -120,7 +120,7 @@ async function writeAudit(
   );
 }
 
-router.use(requireAuth, requireAdmin);
+router.use("/api/v1/admin", requireAuth, requireAdmin);
 
 router.get("/api/v1/admin/modalities", async (_request, response) => {
   try {
