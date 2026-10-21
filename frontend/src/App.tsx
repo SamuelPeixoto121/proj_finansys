@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { FormEvent } from "react";
 
 interface User {
@@ -186,6 +186,8 @@ export default function App() {
   const [rateMinTerm, setRateMinTerm] = useState("");
   const [rateMaxTerm, setRateMaxTerm] = useState("");
   const [rateMonthly, setRateMonthly] = useState("");
+  // Fica true quando o admin muda modalidades ou faixas; o simulador recarrega a lista ao voltar.
+  const catalogStaleRef = useRef(false);
 
   const selectedModality =
     modalities.find((modality) => modality.code === selectedCode) ?? null;
@@ -306,6 +308,38 @@ export default function App() {
 
     return () => controller.abort();
   }, [user]);
+
+  useEffect(() => {
+    if (view !== "simulator" || !user || !catalogStaleRef.current) return;
+
+    const controller = new AbortController();
+
+    async function refreshModalities() {
+      try {
+        const response = await fetch("/api/v1/modalities", {
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+
+        const data: ModalitiesResponse = await response.json();
+        if (controller.signal.aborted) return;
+
+        catalogStaleRef.current = false;
+        setModalities(data.modalities);
+        setSelectedCode((currentCode) =>
+          data.modalities.some((modality) => modality.code === currentCode)
+            ? currentCode
+            : (data.modalities[0]?.code ?? ""),
+        );
+      } catch {
+        // Se falhar, a lista antiga continua na tela e uma nova tentativa acontece na próxima visita.
+      }
+    }
+
+    void refreshModalities();
+
+    return () => controller.abort();
+  }, [view, user]);
 
   function changeMode(nextMode: AuthMode) {
     setMode(nextMode);
@@ -560,6 +594,7 @@ export default function App() {
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setAdminMessage(data.message);
+      catalogStaleRef.current = true;
       resetAdminForm();
       await loadAdminModalities();
       if (adminEditingCode === null) {
@@ -590,6 +625,7 @@ export default function App() {
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setAdminMessage(data.message);
+      catalogStaleRef.current = true;
       await loadAdminModalities();
     } catch (err) {
       setAdminError(err instanceof Error ? err.message : "Não foi possível alterar o status.");
@@ -675,6 +711,7 @@ export default function App() {
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setRateMessage(data.message);
+      catalogStaleRef.current = true;
       resetRateForm();
       await loadRateRanges(ratesCode);
       await loadAdminModalities();
@@ -703,6 +740,7 @@ export default function App() {
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setRateMessage(data.message);
+      catalogStaleRef.current = true;
       await loadRateRanges(ratesCode);
       await loadAdminModalities();
     } catch (err) {
