@@ -212,6 +212,9 @@ export default function App() {
         if (!response.ok) {
           sessionStorage.removeItem(TOKEN_KEY);
           setUser(null);
+          if (response.status === 401) {
+            setError("Sua sessão expirou. Entre novamente.");
+          }
           return;
         }
 
@@ -261,6 +264,11 @@ export default function App() {
             signal: controller.signal,
           }),
         ]);
+
+        if (historyResponse.status === 401) {
+          handleSessionExpired();
+          return;
+        }
 
         if (!modalitiesResponse.ok) {
           throw new Error(await readError(modalitiesResponse));
@@ -527,6 +535,10 @@ export default function App() {
       const response = await fetch("/api/v1/admin/modalities", {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error(await readError(response));
       const data: { modalities: typeof adminModalities } = await response.json();
       setAdminModalities(data.modalities);
@@ -591,6 +603,10 @@ export default function App() {
           body: JSON.stringify(payload),
         },
       );
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setAdminMessage(data.message);
@@ -622,6 +638,10 @@ export default function App() {
           body: JSON.stringify({ active }),
         },
       );
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setAdminMessage(data.message);
@@ -648,6 +668,10 @@ export default function App() {
         `/api/v1/admin/modalities/${encodeURIComponent(code)}/rates`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error(await readError(response));
       const data: AdminRatesResponse = await response.json();
       setRatesData(data);
@@ -708,6 +732,10 @@ export default function App() {
           body: JSON.stringify(payload),
         },
       );
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setRateMessage(data.message);
@@ -737,6 +765,10 @@ export default function App() {
           body: JSON.stringify({ active: !range.active }),
         },
       );
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error(await readError(response));
       const data: { message: string } = await response.json();
       setRateMessage(data.message);
@@ -751,6 +783,11 @@ export default function App() {
   useEffect(() => {
     if (view === "admin" && user?.role === "ADMIN") void loadAdminModalities();
   }, [view, user?.role]);
+  function handleSessionExpired() {
+    handleLogout();
+    setError("Sua sessão expirou. Entre novamente.");
+  }
+
   function handleLogout() {
     sessionStorage.removeItem(TOKEN_KEY);
     setUser(null);
