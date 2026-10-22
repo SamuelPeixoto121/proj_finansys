@@ -4,6 +4,7 @@ import modalitiesRouter from "./routes/modalities.js";
 import simulationsRouter from "./routes/simulations.js";
 import adminModalitiesRouter from "./routes/admin-modalities.js";
 import adminRateRangesRouter from "./routes/admin-rate-ranges.js";
+import adminReportsRouter from "./routes/admin-reports.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(modalitiesRouter);
 app.use(simulationsRouter);
 app.use(adminModalitiesRouter);
 app.use(adminRateRangesRouter);
+app.use(adminReportsRouter);
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Rota não encontrada." });

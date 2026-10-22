@@ -30,7 +30,8 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - `domain/credit-calculator.ts`: cálculo da Tabela Price.
 - `domain/rate-range-rules.ts`: validação e sobreposição das faixas de juros.
 - `middleware/require-auth.ts` e `require-admin.ts`: autenticação por JWT e exigência do papel `ADMIN`.
-- `routes/`: `auth.ts`, `modalities.ts`, `simulations.ts`, `admin-modalities.ts`, `admin-rate-ranges.ts`.
+- `domain/admin-queries.ts`: paginação e filtros das consultas administrativas.
+- `routes/`: `auth.ts`, `modalities.ts`, `simulations.ts`, `admin-modalities.ts`, `admin-rate-ranges.ts`, `admin-reports.ts`.
 
 **Frontend**
 
@@ -50,11 +51,12 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Interface administrativa de modalidades e de faixas de juros.
 - Lista de modalidades do simulador atualizada sozinha depois de mudanças no admin.
 - Sessão expirada: o site volta ao login com a mensagem "Sua sessão expirou. Entre novamente.".
-- 31 testes automatizados passando no backend.
+- API administrativa de consulta, só de leitura: `GET /admin/users`, `GET /admin/metrics` e `GET /admin/audit-logs` (paginação com `page` e `pageSize`, e filtros `entity` e `action` na auditoria).
+- 47 testes automatizados passando no backend.
 
 **Pendente, em ordem sugerida**
 
-1. Consultas administrativas: listar usuários, métricas e consultar o histórico de auditoria (hoje a auditoria só é gravada).
+1. Telas das consultas administrativas no painel (usuários, métricas e auditoria): a API já existe, falta a interface.
 2. Reutilização e comparação de simulações, e edição dos dados da conta (previstos no escopo, ainda não feitos).
 3. Revisão de segurança e regras de negócio: precisão decimal no cálculo, limite de tentativas de login, recuperação de senha.
 4. Preparar a publicação: configuração de produção e hospedagem compatível com o orçamento (o GitHub Pages só serve o frontend estático; o backend e o MySQL precisam de outro serviço).

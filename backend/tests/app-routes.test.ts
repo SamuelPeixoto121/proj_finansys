@@ -63,3 +63,21 @@ test("rotas administrativas de faixas de juros negam usuário comum", async () =
     .send({ minTerm: 3, maxTerm: 12, monthlyRatePercent: 2 });
   assert.equal(response.status, 403);
 });
+
+for (const rota of [
+  "/api/v1/admin/users",
+  "/api/v1/admin/metrics",
+  "/api/v1/admin/audit-logs",
+]) {
+  test(`${rota} exige token`, async () => {
+    const response = await request(app).get(rota);
+    assert.equal(response.status, 401);
+  });
+
+  test(`${rota} nega usuário comum`, async () => {
+    const response = await request(app)
+      .get(rota)
+      .set("Authorization", `Bearer ${userToken}`);
+    assert.equal(response.status, 403);
+  });
+}

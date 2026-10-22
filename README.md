@@ -17,13 +17,14 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
 - Área administrativa (apenas para o papel `ADMIN`):
   - cadastro, edição e ativação/desativação de modalidades;
   - cadastro, edição e ativação/desativação de faixas de juros, com bloqueio de faixas sobrepostas;
-  - registro das ações administrativas na tabela de auditoria.
+  - registro das ações administrativas na tabela de auditoria;
+  - API de consulta de usuários (sem expor senhas), métricas gerais e histórico de auditoria, com paginação e filtros.
 - Sessão expirada tratada em todo o site: o usuário volta ao login com um aviso.
 - Testes automatizados do cálculo, da autenticação, das permissões, das regras das faixas de juros e das rotas.
 
 **Planejado**
 
-- Consulta de usuários, métricas e histórico de auditoria na área administrativa.
+- Telas de consulta de usuários, métricas e histórico de auditoria na área administrativa (a API correspondente já existe).
 - Reutilização e comparação de simulações.
 - Edição dos dados da conta.
 - Preparação para produção e publicação.
@@ -170,6 +171,9 @@ Todos rodam na raiz do projeto.
 | POST | `/api/v1/admin/modalities/:code/rates` | Admin | Cria uma faixa de juros |
 | PATCH | `/api/v1/admin/modalities/:code/rates/:rateId` | Admin | Edita uma faixa |
 | PATCH | `/api/v1/admin/modalities/:code/rates/:rateId/status` | Admin | Ativa ou desativa uma faixa |
+| GET | `/api/v1/admin/users` | Admin | Lista os usuários, com paginação e a contagem de simulações de cada um |
+| GET | `/api/v1/admin/metrics` | Admin | Métricas gerais do sistema |
+| GET | `/api/v1/admin/audit-logs` | Admin | Histórico de auditoria, com paginação e filtros `entity` e `action` |
 
 Rotas inexistentes respondem `404` em JSON. Todas as ações administrativas exigem o papel `ADMIN` e ficam registradas em `audit_logs`.
 
@@ -204,5 +208,5 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 - O cálculo usa o tipo `number` do JavaScript com arredondamento para centavos. Em um sistema financeiro real seria necessária precisão decimal.
 - Não há renovação de sessão: o login dura 15 minutos e depois é preciso entrar de novo. O token fica no `sessionStorage` do navegador.
 - Não há recuperação de senha, confirmação de e-mail nem limite de tentativas de login.
-- Ainda não há tela para consultar usuários, métricas ou auditoria.
+- A API de consulta de usuários, métricas e auditoria já existe, mas ainda não há telas para ela.
 - A configuração de produção e a hospedagem ainda não foram definidas.

@@ -10,7 +10,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "db:migrate": "tsx src/migrate.ts",
-    "test": "tsx --test tests/credit-calculator.test.ts tests/require-auth.test.ts tests/require-admin.test.ts tests/rate-range-rules.test.ts tests/app-routes.test.ts"
+    "test": "tsx --test tests/credit-calculator.test.ts tests/require-auth.test.ts tests/require-admin.test.ts tests/rate-range-rules.test.ts tests/app-routes.test.ts tests/admin-queries.test.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
