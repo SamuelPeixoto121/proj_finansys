@@ -81,6 +81,58 @@ interface AdminRatesResponse {
   rateRanges: AdminRateRange[];
 }
 
+type AdminTab = "modalities" | "users" | "metrics" | "audit";
+
+interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  createdAt: string;
+  simulationCount: number;
+}
+
+interface AdminUsersResponse {
+  users: AdminUser[];
+  pagination: PaginationInfo;
+}
+
+interface AdminMetrics {
+  users: { total: number; admins: number };
+  simulations: {
+    total: number;
+    last7Days: number;
+    last30Days: number;
+    totalRequestedAmount: number;
+  };
+  modalities: { total: number; active: number };
+  rateRanges: { total: number; active: number };
+  simulationsByModality: { code: string; name: string; simulations: number }[];
+  generatedAt: string;
+}
+
+interface AuditLogEntry {
+  id: number;
+  action: string;
+  entity: string;
+  entityId: number | null;
+  metadata: unknown;
+  createdAt: string;
+  user: { id: number; name: string | null; email: string | null } | null;
+}
+
+interface AuditLogsResponse {
+  auditLogs: AuditLogEntry[];
+  pagination: PaginationInfo;
+}
+
 type AuthMode = "login" | "register";
 type DashboardView = "simulator" | "history" | "account" | "admin";
 
@@ -115,6 +167,75 @@ function formatDate(value?: string): string {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+const ADMIN_PAGE_SIZE = 10;
+
+const ADMIN_TABS: { id: AdminTab; label: string }[] = [
+  { id: "modalities", label: "Modalidades" },
+  { id: "users", label: "Usuários" },
+  { id: "metrics", label: "Métricas" },
+  { id: "audit", label: "Auditoria" },
+];
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  CREATE: "Criação",
+  UPDATE: "Edição",
+  ACTIVATE: "Ativação",
+  DEACTIVATE: "Desativação",
+};
+
+const AUDIT_ENTITY_LABELS: Record<string, string> = {
+  CREDIT_MODALITY: "Modalidade",
+  INTEREST_RATE_RANGE: "Faixa de juros",
+};
+
+function describeMetadata(metadata: unknown): string {
+  if (metadata === null || metadata === undefined) return "—";
+  if (typeof metadata !== "object" || Array.isArray(metadata)) {
+    return String(metadata);
+  }
+
+  const entries = Object.entries(metadata as Record<string, unknown>);
+  if (entries.length === 0) return "—";
+
+  return entries
+    .map(([key, value]) =>
+      `${key}: ${typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)}`,
+    )
+    .join(" · ");
+}
+
+function Pager({
+  pagination,
+  singular,
+  plural,
+  disabled,
+  onChange,
+}: {
+  pagination: PaginationInfo | null;
+  singular: string;
+  plural: string;
+  disabled: boolean;
+  onChange: (page: number) => void;
+}) {
+  if (!pagination) return null;
+
+  const { page, totalPages, total } = pagination;
+  const summary =
+    total === 0
+      ? `Nenhum ${singular}`
+      : `Página ${page} de ${totalPages} · ${total} ${total === 1 ? singular : plural}`;
+
+  return (
+    <div className="admin-pager">
+      <span>{summary}</span>
+      <div className="admin-row-actions">
+        <button className="secondary-button" type="button" disabled={disabled || page <= 1} onClick={() => onChange(page - 1)}>Anterior</button>
+        <button className="secondary-button" type="button" disabled={disabled || page >= totalPages} onClick={() => onChange(page + 1)}>Próxima</button>
+      </div>
+    </div>
+  );
 }
 
 async function readError(response: Response): Promise<string> {
@@ -188,6 +309,24 @@ export default function App() {
   const [rateMonthly, setRateMonthly] = useState("");
   // Fica true quando o admin muda modalidades ou faixas; o simulador recarrega a lista ao voltar.
   const catalogStaleRef = useRef(false);
+  const [adminTab, setAdminTab] = useState<AdminTab>("modalities");
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [usersPagination, setUsersPagination] = useState<PaginationInfo | null>(null);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
+  const usersRequestRef = useRef(0);
+  const [adminMetrics, setAdminMetrics] = useState<AdminMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsError, setMetricsError] = useState("");
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditPagination, setAuditPagination] = useState<PaginationInfo | null>(null);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditEntity, setAuditEntity] = useState("");
+  const [auditAction, setAuditAction] = useState("");
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState("");
+  const auditRequestRef = useRef(0);
 
   const selectedModality =
     modalities.find((modality) => modality.code === selectedCode) ?? null;
@@ -783,6 +922,104 @@ export default function App() {
   useEffect(() => {
     if (view === "admin" && user?.role === "ADMIN") void loadAdminModalities();
   }, [view, user?.role]);
+  async function adminGet<T>(path: string): Promise<T | null> {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token || user?.role !== "ADMIN") return null;
+
+    const response = await fetch(path, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 401) {
+      handleSessionExpired();
+      return null;
+    }
+
+    if (!response.ok) throw new Error(await readError(response));
+    return (await response.json()) as T;
+  }
+
+  async function loadAdminUsers(page: number) {
+    const requestId = ++usersRequestRef.current;
+    setUsersLoading(true);
+    setUsersError("");
+
+    try {
+      const data = await adminGet<AdminUsersResponse>(
+        `/api/v1/admin/users?page=${page}&pageSize=${ADMIN_PAGE_SIZE}`,
+      );
+      if (!data || requestId !== usersRequestRef.current) return;
+      setAdminUsers(data.users);
+      setUsersPagination(data.pagination);
+    } catch (err) {
+      if (requestId === usersRequestRef.current) {
+        setUsersError(err instanceof Error ? err.message : "Não foi possível carregar os usuários.");
+      }
+    } finally {
+      if (requestId === usersRequestRef.current) setUsersLoading(false);
+    }
+  }
+
+  async function loadAdminMetrics() {
+    setMetricsLoading(true);
+    setMetricsError("");
+
+    try {
+      const data = await adminGet<AdminMetrics>("/api/v1/admin/metrics");
+      if (data) setAdminMetrics(data);
+    } catch (err) {
+      setMetricsError(err instanceof Error ? err.message : "Não foi possível carregar as métricas.");
+    } finally {
+      setMetricsLoading(false);
+    }
+  }
+
+  async function loadAuditLogs(page: number, entity: string, action: string) {
+    const requestId = ++auditRequestRef.current;
+    setAuditLoading(true);
+    setAuditError("");
+
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(ADMIN_PAGE_SIZE),
+    });
+    if (entity) params.set("entity", entity);
+    if (action) params.set("action", action);
+
+    try {
+      const data = await adminGet<AuditLogsResponse>(
+        `/api/v1/admin/audit-logs?${params.toString()}`,
+      );
+      if (!data || requestId !== auditRequestRef.current) return;
+      setAuditLogs(data.auditLogs);
+      setAuditPagination(data.pagination);
+    } catch (err) {
+      if (requestId === auditRequestRef.current) {
+        setAuditError(err instanceof Error ? err.message : "Não foi possível consultar a auditoria.");
+      }
+    } finally {
+      if (requestId === auditRequestRef.current) setAuditLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (view === "admin" && adminTab === "users" && user?.role === "ADMIN") {
+      void loadAdminUsers(usersPage);
+    }
+  }, [view, adminTab, usersPage]);
+
+  useEffect(() => {
+    if (view === "admin" && adminTab === "metrics" && user?.role === "ADMIN") {
+      void loadAdminMetrics();
+    }
+  }, [view, adminTab]);
+
+  useEffect(() => {
+    if (view === "admin" && adminTab === "audit" && user?.role === "ADMIN") {
+      void loadAuditLogs(auditPage, auditEntity, auditAction);
+    }
+  }, [view, adminTab, auditPage, auditEntity, auditAction]);
+
   function handleSessionExpired() {
     handleLogout();
     setError("Sua sessão expirou. Entre novamente.");
@@ -801,6 +1038,16 @@ export default function App() {
     setMode("login");
     setView("simulator");
     setSimulation(null);
+    setAdminTab("modalities");
+    setAdminUsers([]);
+    setUsersPagination(null);
+    setUsersPage(1);
+    setAdminMetrics(null);
+    setAuditLogs([]);
+    setAuditPagination(null);
+    setAuditPage(1);
+    setAuditEntity("");
+    setAuditAction("");
   }
 
   function useHistorySimulation(item: Simulation) {
@@ -1106,6 +1353,150 @@ export default function App() {
         )}
 
         {view === "admin" && user.role === "ADMIN" && (
+          <nav className="dashboard-nav admin-subnav" aria-label="Seções da administração">
+            {ADMIN_TABS.map((tab) => (
+              <button key={tab.id} type="button" className={`nav-tab ${adminTab === tab.id ? "active" : ""}`} onClick={() => setAdminTab(tab.id)}>{tab.label}</button>
+            ))}
+          </nav>
+        )}
+
+        {view === "admin" && user.role === "ADMIN" && adminTab === "users" && (
+          <section className="info-card admin-modalities-panel">
+            <p className="eyebrow">PAINEL ADMINISTRATIVO</p>
+            <h2>Usuários cadastrados</h2>
+            <p className="admin-help">Contas do sistema, da mais recente para a mais antiga. Senhas nunca são exibidas.</p>
+            {usersError && <p className="form-message error-message" role="alert">{usersError}</p>}
+            {usersLoading && adminUsers.length === 0 ? <p>Carregando usuários...</p> : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Simulações</th><th>Cadastro</th></tr></thead>
+                  <tbody>
+                    {adminUsers.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.name}</td>
+                        <td>{item.email}</td>
+                        <td><span className={item.role === "ADMIN" ? "admin-status active" : "admin-status neutral"}>{item.role === "ADMIN" ? "Administrador" : "Cliente"}</span></td>
+                        <td>{item.simulationCount}</td>
+                        <td>{formatDate(item.createdAt)}</td>
+                      </tr>
+                    ))}
+                    {!usersLoading && !usersError && adminUsers.length === 0 && <tr><td colSpan={5}>Nenhum usuário encontrado.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <Pager pagination={usersPagination} singular="usuário" plural="usuários" disabled={usersLoading} onChange={setUsersPage} />
+          </section>
+        )}
+
+        {view === "admin" && user.role === "ADMIN" && adminTab === "metrics" && (
+          <section className="info-card admin-modalities-panel">
+            <p className="eyebrow">PAINEL ADMINISTRATIVO</p>
+            <div className="admin-table-heading">
+              <h2>Métricas do sistema</h2>
+              <button className="secondary-button" type="button" disabled={metricsLoading} onClick={() => void loadAdminMetrics()}>Atualizar</button>
+            </div>
+            {metricsError && <p className="form-message error-message" role="alert">{metricsError}</p>}
+            {!adminMetrics && metricsLoading && <p>Carregando métricas...</p>}
+            {adminMetrics && (
+              <>
+                <div className="admin-metrics-grid">
+                  <article className="admin-metric-card">
+                    <span>Usuários</span>
+                    <strong>{adminMetrics.users.total}</strong>
+                    <small>{adminMetrics.users.admins} administrador(es)</small>
+                  </article>
+                  <article className="admin-metric-card">
+                    <span>Simulações</span>
+                    <strong>{adminMetrics.simulations.total}</strong>
+                    <small>{adminMetrics.simulations.last7Days} nos últimos 7 dias · {adminMetrics.simulations.last30Days} nos últimos 30</small>
+                  </article>
+                  <article className="admin-metric-card">
+                    <span>Valor simulado</span>
+                    <strong>{formatCurrency(adminMetrics.simulations.totalRequestedAmount)}</strong>
+                    <small>soma dos valores solicitados</small>
+                  </article>
+                  <article className="admin-metric-card">
+                    <span>Modalidades</span>
+                    <strong>{adminMetrics.modalities.active}</strong>
+                    <small>ativas, de {adminMetrics.modalities.total} cadastradas</small>
+                  </article>
+                  <article className="admin-metric-card">
+                    <span>Faixas de juros</span>
+                    <strong>{adminMetrics.rateRanges.active}</strong>
+                    <small>ativas, de {adminMetrics.rateRanges.total} cadastradas</small>
+                  </article>
+                </div>
+
+                <h3>Simulações por modalidade</h3>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Modalidade</th><th>Simulações</th><th>Proporção</th></tr></thead>
+                    <tbody>
+                      {adminMetrics.simulationsByModality.map((item) => {
+                        const max = Math.max(...adminMetrics.simulationsByModality.map((row) => row.simulations), 0);
+                        const width = max > 0 ? (item.simulations / max) * 100 : 0;
+                        return (
+                          <tr key={item.code}>
+                            <td>{item.name}<small>{item.code}</small></td>
+                            <td>{item.simulations}</td>
+                            <td><div className="admin-bar" aria-hidden="true"><span style={{ width: `${width}%` }} /></div></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="admin-help">Atualizado em {formatDate(adminMetrics.generatedAt)}.</p>
+              </>
+            )}
+          </section>
+        )}
+
+        {view === "admin" && user.role === "ADMIN" && adminTab === "audit" && (
+          <section className="info-card admin-modalities-panel">
+            <p className="eyebrow">PAINEL ADMINISTRATIVO</p>
+            <h2>Histórico de auditoria</h2>
+            <p className="admin-help">Ações administrativas registradas, da mais recente para a mais antiga.</p>
+            <div className="admin-filters">
+              <label>Item
+                <select value={auditEntity} onChange={(event) => { setAuditEntity(event.target.value); setAuditPage(1); }}>
+                  <option value="">Todos</option>
+                  {Object.entries(AUDIT_ENTITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label>Ação
+                <select value={auditAction} onChange={(event) => { setAuditAction(event.target.value); setAuditPage(1); }}>
+                  <option value="">Todas</option>
+                  {Object.entries(AUDIT_ACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+            </div>
+            {auditError && <p className="form-message error-message" role="alert">{auditError}</p>}
+            {auditLoading && auditLogs.length === 0 ? <p>Carregando registros...</p> : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Data e hora</th><th>Ação</th><th>Item</th><th>Responsável</th><th>Detalhes</th></tr></thead>
+                  <tbody>
+                    {auditLogs.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>{formatDate(entry.createdAt)}</td>
+                        <td>{AUDIT_ACTION_LABELS[entry.action] ?? entry.action}</td>
+                        <td>{AUDIT_ENTITY_LABELS[entry.entity] ?? entry.entity}{entry.entityId !== null ? ` #${entry.entityId}` : ""}</td>
+                        <td>{entry.user ? <>{entry.user.name}<small>{entry.user.email}</small></> : "—"}</td>
+                        <td><code className="admin-metadata">{describeMetadata(entry.metadata)}</code></td>
+                      </tr>
+                    ))}
+                    {!auditLoading && !auditError && auditLogs.length === 0 && <tr><td colSpan={5}>Nenhum registro encontrado.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <Pager pagination={auditPagination} singular="registro" plural="registros" disabled={auditLoading} onChange={setAuditPage} />
+          </section>
+        )}
+
+        {view === "admin" && user.role === "ADMIN" && adminTab === "modalities" && (
           <section className="info-card admin-modalities-panel">
             <p className="eyebrow">PAINEL ADMINISTRATIVO</p>
             <h2>Gerenciar modalidades de crédito</h2>

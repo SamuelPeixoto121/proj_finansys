@@ -1,6 +1,6 @@
 # FinanSys
 
-Plataforma web de **simulação e gestão de operações de crédito**, desenvolvida como projeto de portfólio de Ciência da Computação. O usuário simula empréstimos e financiamentos, guarda o histórico das simulações e acompanha tudo em um painel pessoal. Uma área administrativa permite gerenciar as modalidades de crédito e as faixas de juros.
+Plataforma web de **simulação e gestão de operações de crédito**, desenvolvida como projeto de portfólio de Ciência da Computação. O usuário simula empréstimos e financiamentos, guarda o histórico das simulações e acompanha tudo em um painel pessoal. Uma área administrativa permite gerenciar as modalidades de crédito e as faixas de juros, e consultar usuários, métricas e o histórico de auditoria.
 
 > **Projeto educacional.** O FinanSys não concede crédito, não movimenta dinheiro, não consulta Serasa nem qualquer serviço real de análise de crédito. As taxas cadastradas são **fictícias** e servem apenas para demonstração.
 
@@ -12,20 +12,19 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
 
 - Cadastro e login, com senha protegida por hash (bcrypt) e autenticação por token JWT.
 - Simulador de crédito: escolha da modalidade, valor e prazo, com cálculo de parcela, total e juros pela Tabela Price.
-- Histórico com as 50 simulações mais recentes de cada usuário.
+- Histórico com as 50 simulações mais recentes de cada usuário; o botão "Ver detalhes" reabre a simulação no simulador, com a modalidade, o valor e o prazo preenchidos.
 - Painel pessoal com as telas Simular crédito, Histórico e Minha conta.
 - Área administrativa (apenas para o papel `ADMIN`):
   - cadastro, edição e ativação/desativação de modalidades;
   - cadastro, edição e ativação/desativação de faixas de juros, com bloqueio de faixas sobrepostas;
   - registro das ações administrativas na tabela de auditoria;
-  - API de consulta de usuários (sem expor senhas), métricas gerais e histórico de auditoria, com paginação e filtros.
+  - abas de consulta: usuários (sem expor senhas), métricas gerais e histórico de auditoria, com paginação e filtros.
 - Sessão expirada tratada em todo o site: o usuário volta ao login com um aviso.
 - Testes automatizados do cálculo, da autenticação, das permissões, das regras das faixas de juros e das rotas.
 
 **Planejado**
 
-- Telas de consulta de usuários, métricas e histórico de auditoria na área administrativa (a API correspondente já existe).
-- Reutilização e comparação de simulações.
+- Comparação de simulações.
 - Edição dos dados da conta.
 - Preparação para produção e publicação.
 
@@ -208,5 +207,4 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 - O cálculo usa o tipo `number` do JavaScript com arredondamento para centavos. Em um sistema financeiro real seria necessária precisão decimal.
 - Não há renovação de sessão: o login dura 15 minutos e depois é preciso entrar de novo. O token fica no `sessionStorage` do navegador.
 - Não há recuperação de senha, confirmação de e-mail nem limite de tentativas de login.
-- A API de consulta de usuários, métricas e auditoria já existe, mas ainda não há telas para ela.
 - A configuração de produção e a hospedagem ainda não foram definidas.

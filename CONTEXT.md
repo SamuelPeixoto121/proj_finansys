@@ -35,7 +35,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 **Frontend**
 
-- `frontend/src/App.tsx`: login e cadastro, simulador, histórico, Minha conta e o painel administrativo (modalidades e faixas de juros).
+- `frontend/src/App.tsx`: login e cadastro, simulador, histórico, Minha conta e o painel administrativo, com as abas Modalidades (e faixas de juros), Usuários, Métricas e Auditoria.
 - `frontend/css/styles.css`: estilos e regras responsivas.
 - O Vite encaminha `/api` para `http://localhost:3000`.
 
@@ -48,7 +48,8 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Cadastro, login, JWT com validade de 15 minutos e `GET /auth/me`.
 - Simulador, com cálculo, salvamento e histórico das 50 simulações mais recentes.
 - API administrativa de modalidades e de faixas de juros (criar, editar, ativar/desativar), com auditoria e bloqueio de faixas sobrepostas.
-- Interface administrativa de modalidades e de faixas de juros.
+- Interface administrativa com abas: Modalidades (e faixas de juros), Usuários, Métricas e Auditoria, com paginação e filtros.
+- Reutilização de simulações: o botão "Ver detalhes" do histórico reabre a simulação no simulador.
 - Lista de modalidades do simulador atualizada sozinha depois de mudanças no admin.
 - Sessão expirada: o site volta ao login com a mensagem "Sua sessão expirou. Entre novamente.".
 - API administrativa de consulta, só de leitura: `GET /admin/users`, `GET /admin/metrics` e `GET /admin/audit-logs` (paginação com `page` e `pageSize`, e filtros `entity` e `action` na auditoria).
@@ -56,10 +57,9 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 **Pendente, em ordem sugerida**
 
-1. Telas das consultas administrativas no painel (usuários, métricas e auditoria): a API já existe, falta a interface.
-2. Reutilização e comparação de simulações, e edição dos dados da conta (previstos no escopo, ainda não feitos).
-3. Revisão de segurança e regras de negócio: precisão decimal no cálculo, limite de tentativas de login, recuperação de senha.
-4. Preparar a publicação: configuração de produção e hospedagem compatível com o orçamento (o GitHub Pages só serve o frontend estático; o backend e o MySQL precisam de outro serviço).
+1. Revisão de segurança e regras de negócio: limite de tentativas de login, precisão decimal no cálculo, validações.
+2. Preparar a publicação: configuração de produção e hospedagem compatível com o orçamento (o GitHub Pages só serve o frontend estático; o backend e o MySQL precisam de outro serviço).
+3. Opcionais do escopo original: comparação de simulações, edição dos dados da conta e recuperação de senha.
 
 ## Decisões e convenções
 

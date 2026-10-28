@@ -1056,3 +1056,108 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Telas de consulta do painel administrativo */
+.admin-subnav {
+  margin: 0 0 18px;
+}
+
+.admin-status.neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-filters label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.admin-filters select {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.admin-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 1.75rem;
+}
+
+.admin-metric-card {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.admin-metric-card span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-metric-card strong {
+  font-family: Manrope, sans-serif;
+  font-size: 1.7rem;
+  color: var(--navy);
+}
+
+.admin-metric-card small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.admin-bar {
+  min-width: 120px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.admin-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green-dark);
+}
+
+.admin-metadata {
+  display: inline-block;
+  max-width: 420px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #334155;
+  overflow-wrap: anywhere;
+}
