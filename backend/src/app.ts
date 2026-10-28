@@ -1,4 +1,8 @@
 import express from "express";
+import {
+  createLoginRateLimit,
+  createRegisterRateLimit,
+} from "./middleware/auth-rate-limit.js";
 import authRouter from "./routes/auth.js";
 import modalitiesRouter from "./routes/modalities.js";
 import simulationsRouter from "./routes/simulations.js";
@@ -7,6 +11,12 @@ import adminRateRangesRouter from "./routes/admin-rate-ranges.js";
 import adminReportsRouter from "./routes/admin-reports.js";
 
 const app = express();
+
+const trustProxyHops = Number(process.env.TRUST_PROXY);
+
+if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) {
+  app.set("trust proxy", trustProxyHops);
+}
 
 app.use(express.json());
 
@@ -17,6 +27,8 @@ app.get("/api/v1/health", (_request, response) => {
   });
 });
 
+app.use("/api/v1/auth/login", createLoginRateLimit());
+app.use("/api/v1/auth/register", createRegisterRateLimit());
 app.use(authRouter);
 app.use(modalitiesRouter);
 app.use(simulationsRouter);

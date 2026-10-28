@@ -20,6 +20,7 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
   - registro das ações administrativas na tabela de auditoria;
   - abas de consulta: usuários (sem expor senhas), métricas gerais e histórico de auditoria, com paginação e filtros.
 - Sessão expirada tratada em todo o site: o usuário volta ao login com um aviso.
+- Limite de tentativas: no login, 5 erros por conta e 20 por IP a cada 15 minutos; no cadastro, 10 por IP por hora. Acima disso a API responde `429` com o tempo de espera.
 - Testes automatizados do cálculo, da autenticação, das permissões, das regras das faixas de juros e das rotas.
 
 **Planejado**
@@ -111,6 +112,8 @@ node -p "require('crypto').randomBytes(48).toString('hex')"
 
 O arquivo `.env` fica fora do Git e nunca deve ser publicado.
 
+Se a API ficar atrás de um proxy reverso (comum em hospedagens), defina também `TRUST_PROXY=1`. Sem isso, o limite de tentativas enxerga o IP do proxy em vez do IP de cada visitante. Em desenvolvimento local, não use essa variável.
+
 **4. Criar as tabelas e os dados iniciais:**
 
 ```powershell
@@ -189,6 +192,7 @@ Rotas inexistentes respondem `404` em JSON. Todas as ações administrativas exi
 - Senhas guardadas apenas como hash bcrypt (custo 12), com mínimo de 8 caracteres.
 - Token JWT assinado com HS256 e validade de 15 minutos; o segredo vem de variável de ambiente e deve ter pelo menos 32 caracteres.
 - Permissões verificadas no backend: usuário comum recebe `403` nas rotas administrativas.
+- Limite de tentativas no login e no cadastro, contado a cada requisição (tentativas simultâneas não furam o limite) e com o IP real só quando há proxy confiável configurado (`TRUST_PROXY`).
 - Consultas SQL com parâmetros, e alterações das faixas em transação.
 - O arquivo `.env` é ignorado pelo Git; só o `.env.example` é versionado.
 
@@ -200,11 +204,12 @@ npm run typecheck
 npm run build
 ```
 
-Os testes cobrem o cálculo de crédito, a autenticação, o middleware de administrador, as regras das faixas de juros e o comportamento das rotas (permissões e `404`).
+Os testes cobrem o cálculo de crédito, a autenticação, o middleware de administrador, as regras das faixas de juros, as consultas administrativas, o limite de tentativas e o comportamento das rotas (permissões e `404`).
 
 ## Limitações conhecidas
 
 - O cálculo usa o tipo `number` do JavaScript com arredondamento para centavos. Em um sistema financeiro real seria necessária precisão decimal.
 - Não há renovação de sessão: o login dura 15 minutos e depois é preciso entrar de novo. O token fica no `sessionStorage` do navegador.
-- Não há recuperação de senha, confirmação de e-mail nem limite de tentativas de login.
+- Não há recuperação de senha nem confirmação de e-mail.
+- Os contadores do limite de tentativas ficam na memória do servidor: zeram quando ele reinicia e não são compartilhados entre várias instâncias.
 - A configuração de produção e a hospedagem ainda não foram definidas.

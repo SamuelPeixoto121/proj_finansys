@@ -30,7 +30,9 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - `domain/credit-calculator.ts`: cálculo da Tabela Price.
 - `domain/rate-range-rules.ts`: validação e sobreposição das faixas de juros.
 - `middleware/require-auth.ts` e `require-admin.ts`: autenticação por JWT e exigência do papel `ADMIN`.
+- `middleware/auth-rate-limit.ts`: limite de tentativas do login e do cadastro.
 - `domain/admin-queries.ts`: paginação e filtros das consultas administrativas.
+- `domain/attempt-limiter.ts`: contador de tentativas por chave e janela de tempo.
 - `routes/`: `auth.ts`, `modalities.ts`, `simulations.ts`, `admin-modalities.ts`, `admin-rate-ranges.ts`, `admin-reports.ts`.
 
 **Frontend**
@@ -53,11 +55,12 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Lista de modalidades do simulador atualizada sozinha depois de mudanças no admin.
 - Sessão expirada: o site volta ao login com a mensagem "Sua sessão expirou. Entre novamente.".
 - API administrativa de consulta, só de leitura: `GET /admin/users`, `GET /admin/metrics` e `GET /admin/audit-logs` (paginação com `page` e `pageSize`, e filtros `entity` e `action` na auditoria).
-- 47 testes automatizados passando no backend.
+- Limite de tentativas: login (5 erros por conta e 20 por IP a cada 15 minutos) e cadastro (10 por IP por hora), em memória, com `429` e `Retry-After`; `TRUST_PROXY` opcional para hospedagem atrás de proxy.
+- 69 testes automatizados passando no backend.
 
 **Pendente, em ordem sugerida**
 
-1. Revisão de segurança e regras de negócio: limite de tentativas de login, precisão decimal no cálculo, validações.
+1. Revisão de segurança, parte 2: resposta em JSON para corpo de requisição inválido (hoje cai no erro padrão do Express), cabeçalhos de segurança (`X-Powered-By`, `nosniff`, `no-store` nas respostas da API), igualar o tempo de resposta do login quando o e-mail não existe e revisar a precisão decimal do cálculo.
 2. Preparar a publicação: configuração de produção e hospedagem compatível com o orçamento (o GitHub Pages só serve o frontend estático; o backend e o MySQL precisam de outro serviço).
 3. Opcionais do escopo original: comparação de simulações, edição dos dados da conta e recuperação de senha.
 
@@ -81,5 +84,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 - Cálculo com o tipo `number` do JavaScript (precisão decimal limitada, adequada para a demonstração).
 - Sem renovação de sessão; o token fica no `sessionStorage`.
-- Sem recuperação de senha, confirmação de e-mail ou limite de tentativas de login.
+- Sem recuperação de senha nem confirmação de e-mail.
+- O papel do usuário vai dentro do token: uma mudança de papel só vale depois de um novo login ou da expiração do token (até 15 minutos).
+- Os contadores do limite de tentativas ficam na memória: zeram quando o servidor reinicia e não são compartilhados entre instâncias.
 - O simulador carrega a lista de modalidades no login e a atualiza ao voltar do painel administrativo, mas não acompanha mudanças feitas por outro administrador ao mesmo tempo.
