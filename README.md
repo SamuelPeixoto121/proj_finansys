@@ -21,6 +21,7 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
   - abas de consulta: usuários (sem expor senhas), métricas gerais e histórico de auditoria, com paginação e filtros.
 - Sessão expirada tratada em todo o site: o usuário volta ao login com um aviso.
 - Limite de tentativas: no login, 5 erros por conta e 20 por IP a cada 15 minutos; no cadastro, 10 por IP por hora. Acima disso a API responde `429` com o tempo de espera.
+- Erros de requisição (JSON inválido, corpo grande demais, falhas internas) respondem em JSON, sem expor detalhes do servidor, e a API envia cabeçalhos de segurança.
 - Testes automatizados do cálculo, da autenticação, das permissões, das regras das faixas de juros e das rotas.
 
 **Planejado**
@@ -193,6 +194,9 @@ Rotas inexistentes respondem `404` em JSON. Todas as ações administrativas exi
 - Token JWT assinado com HS256 e validade de 15 minutos; o segredo vem de variável de ambiente e deve ter pelo menos 32 caracteres.
 - Permissões verificadas no backend: usuário comum recebe `403` nas rotas administrativas.
 - Limite de tentativas no login e no cadastro, contado a cada requisição (tentativas simultâneas não furam o limite) e com o IP real só quando há proxy confiável configurado (`TRUST_PROXY`).
+- Erros sempre em JSON e sem stack trace: JSON inválido responde `400`, corpo acima de 10 KB responde `413` e falhas inesperadas respondem `500` genérico (o detalhe fica só no log do servidor).
+- Cabeçalhos `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` e `Referrer-Policy: no-referrer` nas respostas da API; ela não anuncia que usa Express.
+- O login leva o mesmo tempo quando o e-mail não existe, para não revelar quais contas existem pelo tempo de resposta.
 - Consultas SQL com parâmetros, e alterações das faixas em transação.
 - O arquivo `.env` é ignorado pelo Git; só o `.env.example` é versionado.
 
@@ -204,12 +208,12 @@ npm run typecheck
 npm run build
 ```
 
-Os testes cobrem o cálculo de crédito, a autenticação, o middleware de administrador, as regras das faixas de juros, as consultas administrativas, o limite de tentativas e o comportamento das rotas (permissões e `404`).
+Os testes cobrem o cálculo de crédito, a autenticação, o middleware de administrador, as regras das faixas de juros, as consultas administrativas, o limite de tentativas, o tratamento de erros e os cabeçalhos de segurança e o comportamento das rotas (permissões e `404`).
 
 ## Limitações conhecidas
 
 - O cálculo usa o tipo `number` do JavaScript com arredondamento para centavos. Em um sistema financeiro real seria necessária precisão decimal.
 - Não há renovação de sessão: o login dura 15 minutos e depois é preciso entrar de novo. O token fica no `sessionStorage` do navegador.
-- Não há recuperação de senha nem confirmação de e-mail.
+- Não há recuperação de senha nem confirmação de e-mail. O cadastro avisa quando um e-mail já existe (`409`), o que permite descobrir contas; o limite de cadastros por IP reduz o abuso.
 - Os contadores do limite de tentativas ficam na memória do servidor: zeram quando ele reinicia e não são compartilhados entre várias instâncias.
 - A configuração de produção e a hospedagem ainda não foram definidas.

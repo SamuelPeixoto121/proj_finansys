@@ -1,9 +1,9 @@
-
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { pool } from "../database.js";
+import { checkPassword } from "../domain/credentials.js";
 import {
   requireAuth,
   type AuthenticatedUser,
@@ -163,7 +163,9 @@ router.post("/api/v1/auth/login", async (request, response) => {
 
     const user = users[0];
 
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    const passwordMatches = await checkPassword(user?.password_hash, password);
+
+    if (!user || !passwordMatches) {
       response.status(401).json({
         error: "E-mail ou senha inválidos.",
       });

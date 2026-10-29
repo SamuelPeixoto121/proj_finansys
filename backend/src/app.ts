@@ -1,4 +1,6 @@
 import express from "express";
+import { errorHandler } from "./middleware/error-handler.js";
+import { securityHeaders } from "./middleware/security-headers.js";
 import {
   createLoginRateLimit,
   createRegisterRateLimit,
@@ -12,13 +14,16 @@ import adminReportsRouter from "./routes/admin-reports.js";
 
 const app = express();
 
+app.disable("x-powered-by");
+
 const trustProxyHops = Number(process.env.TRUST_PROXY);
 
 if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) {
   app.set("trust proxy", trustProxyHops);
 }
 
-app.use(express.json());
+app.use("/api", securityHeaders);
+app.use(express.json({ limit: "10kb" }));
 
 app.get("/api/v1/health", (_request, response) => {
   response.status(200).json({
@@ -39,5 +44,7 @@ app.use(adminReportsRouter);
 app.use((_request, response) => {
   response.status(404).json({ error: "Rota não encontrada." });
 });
+
+app.use(errorHandler);
 
 export default app;
