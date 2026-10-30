@@ -5,6 +5,7 @@ import {
   createLoginRateLimit,
   createRegisterRateLimit,
 } from "./middleware/auth-rate-limit.js";
+import accountRouter from "./routes/account.js";
 import authRouter from "./routes/auth.js";
 import modalitiesRouter from "./routes/modalities.js";
 import simulationsRouter from "./routes/simulations.js";
@@ -35,6 +36,7 @@ app.get("/api/v1/health", (_request, response) => {
 app.use("/api/v1/auth/login", createLoginRateLimit());
 app.use("/api/v1/auth/register", createRegisterRateLimit());
 app.use(authRouter);
+app.use(accountRouter);
 app.use(modalitiesRouter);
 app.use(simulationsRouter);
 app.use(adminModalitiesRouter);

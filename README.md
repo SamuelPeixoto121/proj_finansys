@@ -20,14 +20,14 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
   - registro das ações administrativas na tabela de auditoria;
   - abas de consulta: usuários (sem expor senhas), métricas gerais e histórico de auditoria, com paginação e filtros.
 - Sessão expirada tratada em todo o site: o usuário volta ao login com um aviso.
-- Limite de tentativas: no login, 5 erros por conta e 20 por IP a cada 15 minutos; no cadastro, 10 por IP por hora. Acima disso a API responde `429` com o tempo de espera.
+- Limite de tentativas: no login, 5 erros por conta e 20 por IP a cada 15 minutos; no cadastro, 10 por IP por hora; na troca de senha, 5 erros por usuário a cada 15 minutos. Acima disso a API responde `429` com o tempo de espera.
 - Erros de requisição (JSON inválido, corpo grande demais, falhas internas) respondem em JSON, sem expor detalhes do servidor, e a API envia cabeçalhos de segurança.
 - Testes automatizados do cálculo, da autenticação, das permissões, das regras das faixas de juros e das rotas.
 
 **Planejado**
 
 - Comparação de simulações.
-- Edição dos dados da conta.
+- Edição dos dados da conta na interface (a API de nome e senha já existe; falta a tela).
 - Preparação para produção e publicação.
 
 ## Tecnologias
@@ -162,6 +162,8 @@ Todos rodam na raiz do projeto.
 | POST | `/api/v1/auth/register` | Público | Cria uma conta (papel `USER`) |
 | POST | `/api/v1/auth/login` | Público | Autentica e devolve o token |
 | GET | `/api/v1/auth/me` | Logado | Dados do usuário autenticado |
+| PATCH | `/api/v1/auth/me` | Logado | Altera o nome do usuário |
+| PATCH | `/api/v1/auth/me/password` | Logado | Altera a senha (exige a senha atual) |
 | GET | `/api/v1/modalities` | Público | Lista as modalidades ativas |
 | GET | `/api/v1/modalities/:code` | Público | Detalha uma modalidade e suas faixas ativas |
 | POST | `/api/v1/simulations/calculate` | Logado | Calcula e salva uma simulação |
@@ -197,6 +199,7 @@ Rotas inexistentes respondem `404` em JSON. Todas as ações administrativas exi
 - Erros sempre em JSON e sem stack trace: JSON inválido responde `400`, corpo acima de 10 KB responde `413` e falhas inesperadas respondem `500` genérico (o detalhe fica só no log do servidor).
 - Cabeçalhos `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` e `Referrer-Policy: no-referrer` nas respostas da API; ela não anuncia que usa Express.
 - O login leva o mesmo tempo quando o e-mail não existe, para não revelar quais contas existem pelo tempo de resposta.
+- A troca de senha exige a senha atual (senha atual errada responde `400`, e não `401`, para a tela não confundir com sessão expirada) e a nova senha segue as mesmas regras do cadastro. Na edição do perfil só o nome é lido: e-mail e papel não podem ser alterados pela requisição.
 - Consultas SQL com parâmetros, e alterações das faixas em transação.
 - O arquivo `.env` é ignorado pelo Git; só o `.env.example` é versionado.
 
@@ -215,5 +218,6 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 - O cálculo usa o tipo `number` do JavaScript com arredondamento para centavos. Em um sistema financeiro real seria necessária precisão decimal.
 - Não há renovação de sessão: o login dura 15 minutos e depois é preciso entrar de novo. O token fica no `sessionStorage` do navegador.
 - Não há recuperação de senha nem confirmação de e-mail. O cadastro avisa quando um e-mail já existe (`409`), o que permite descobrir contas; o limite de cadastros por IP reduz o abuso.
+- Depois de trocar a senha, os logins já abertos continuam valendo até o token expirar (até 15 minutos).
 - Os contadores do limite de tentativas ficam na memória do servidor: zeram quando ele reinicia e não são compartilhados entre várias instâncias.
 - A configuração de produção e a hospedagem ainda não foram definidas.

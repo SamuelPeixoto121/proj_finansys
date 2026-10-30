@@ -34,8 +34,9 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - `middleware/error-handler.ts` e `security-headers.ts`: respostas de erro em JSON e cabeçalhos de segurança (ordem no `app.ts`: cabeçalhos antes do `express.json`, tratador de erros por último).
 - `domain/admin-queries.ts`: paginação e filtros das consultas administrativas.
 - `domain/attempt-limiter.ts`: contador de tentativas por chave e janela de tempo.
+- `domain/account-rules.ts`: regras de nome e senha, compartilhadas entre o cadastro e a edição da conta.
 - `domain/credentials.ts`: confere a senha e, quando o e-mail não existe, compara com um hash fictício para igualar o tempo do login.
-- `routes/`: `auth.ts`, `modalities.ts`, `simulations.ts`, `admin-modalities.ts`, `admin-rate-ranges.ts`, `admin-reports.ts`.
+- `routes/`: `auth.ts`, `modalities.ts`, `simulations.ts`, `admin-modalities.ts`, `admin-rate-ranges.ts`, `admin-reports.ts`, `account.ts`.
 
 **Frontend**
 
@@ -59,12 +60,20 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - API administrativa de consulta, só de leitura: `GET /admin/users`, `GET /admin/metrics` e `GET /admin/audit-logs` (paginação com `page` e `pageSize`, e filtros `entity` e `action` na auditoria).
 - Limite de tentativas: login (5 erros por conta e 20 por IP a cada 15 minutos) e cadastro (10 por IP por hora), em memória, com `429` e `Retry-After`; `TRUST_PROXY` opcional para hospedagem atrás de proxy.
 - Endurecimento da API: erros sempre em JSON e sem stack trace (`400`, `413`, `500` genérico), corpo limitado a 10 KB, cabeçalhos de segurança e login com o mesmo tempo de resposta quando o e-mail não existe.
-- 83 testes automatizados passando no backend.
+- API de edição da conta: `PATCH /auth/me` (nome) e `PATCH /auth/me/password` (exige a senha atual; limite de 5 erros por usuário a cada 15 minutos). E-mail e papel não são editáveis.
+- 102 testes automatizados passando no backend.
 
 **Pendente, em ordem sugerida**
 
-1. Preparar a publicação: configuração de produção e hospedagem compatível com o orçamento (o GitHub Pages só serve o frontend estático; o backend e o MySQL precisam de outro serviço).
-2. Opcionais: comparação de simulações, edição dos dados da conta, recuperação de senha e precisão decimal no cálculo (hoje usa `number` do JavaScript).
+Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
+
+1. Tela de edição da conta (nome e senha) em Minha conta; a API já existe. Mudança de e-mail não está prevista (exigiria confirmação por e-mail).
+2. Comparação de simulações: escolher 2 ou 3 do histórico e ver lado a lado.
+3. Precisão decimal no cálculo (hoje usa `number` do JavaScript).
+4. Revisão final: telas, textos, documentação e conferência geral. Nessa hora, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
+5. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
+
+Fora do escopo, por decisão: recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
 
 ## Decisões e convenções
 

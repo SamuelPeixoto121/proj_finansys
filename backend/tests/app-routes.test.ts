@@ -81,3 +81,10 @@ for (const rota of [
     assert.equal(response.status, 403);
   });
 }
+
+for (const rota of ["/api/v1/auth/me", "/api/v1/auth/me/password"]) {
+  test(`PATCH ${rota} exige token`, async () => {
+    const response = await request(app).patch(rota).send({});
+    assert.equal(response.status, 401);
+  });
+}

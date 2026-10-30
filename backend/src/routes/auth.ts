@@ -1,8 +1,15 @@
+
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { pool } from "../database.js";
+import {
+  NAME_ERROR,
+  PASSWORD_ERROR,
+  isValidPassword,
+  validateName,
+} from "../domain/account-rules.js";
 import { checkPassword } from "../domain/credentials.js";
 import {
   requireAuth,
@@ -43,13 +50,11 @@ function getJwtSecret(): string | null {
 router.post("/api/v1/auth/register", async (request, response) => {
   const { name, email, password } = request.body ?? {};
 
-  if (
-    typeof name !== "string" ||
-    name.trim().length < 2 ||
-    name.trim().length > 120
-  ) {
+  const validName = validateName(name);
+
+  if (validName.value === undefined) {
     response.status(400).json({
-      error: "O nome deve ter entre 2 e 120 caracteres.",
+      error: NAME_ERROR,
     });
     return;
   }
@@ -73,13 +78,9 @@ router.post("/api/v1/auth/register", async (request, response) => {
     return;
   }
 
-  if (
-    typeof password !== "string" ||
-    password.length < 8 ||
-    Buffer.byteLength(password, "utf8") > 72
-  ) {
+  if (!isValidPassword(password)) {
     response.status(400).json({
-      error: "A senha deve ter pelo menos 8 caracteres e no máximo 72 bytes.",
+      error: PASSWORD_ERROR,
     });
     return;
   }
@@ -102,14 +103,14 @@ router.post("/api/v1/auth/register", async (request, response) => {
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO users (name, email, password_hash)
        VALUES (?, ?, ?)`,
-      [name.trim(), normalizedEmail, passwordHash],
+      [validName.value, normalizedEmail, passwordHash],
     );
 
     response.status(201).json({
       message: "Conta criada com sucesso.",
       user: {
         id: result.insertId,
-        name: name.trim(),
+        name: validName.value,
         email: normalizedEmail,
         role: "USER",
       },

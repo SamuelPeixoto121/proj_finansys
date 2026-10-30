@@ -116,3 +116,37 @@ export function createRegisterRateLimit(
     next();
   };
 }
+
+export function createPasswordChangeRateLimit(
+  options: Partial<AttemptLimiterOptions> = {},
+): RequestHandler {
+  const perUser = new AttemptLimiter({
+    maxAttempts: 5,
+    windowMs: 15 * MINUTE_MS,
+    ...options,
+  });
+
+  return (request, response, next) => {
+    const auth = response.locals.auth as { userId?: number } | undefined;
+    const key = `usuario:${auth?.userId ?? clientIp(request)}`;
+    const result = perUser.hit(key);
+
+    if (!result.allowed) {
+      response.set("Retry-After", String(result.retryAfterSeconds));
+      response.status(429).json({
+        error: blockedMessage(result.retryAfterSeconds),
+      });
+      return;
+    }
+
+    response.on("finish", () => {
+      if (response.statusCode === 200) {
+        perUser.reset(key);
+      } else if (response.statusCode >= 500) {
+        perUser.release(key);
+      }
+    });
+
+    next();
+  };
+}
