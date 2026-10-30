@@ -1161,3 +1161,64 @@ button {
   color: #334155;
   overflow-wrap: anywhere;
 }
+
+/* Formulários de Minha conta */
+.account-forms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 26px;
+}
+
+.account-form {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.account-form h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.account-form label {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.account-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #dce2ea;
+  border-radius: 9px;
+  color: var(--text);
+  background: #fff;
+  font: inherit;
+  font-weight: 400;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.account-form input:focus {
+  border-color: #48a876;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(72 168 118 / 13%);
+}
+
+.account-form .error-message,
+.account-form .success-message {
+  margin: 0;
+}
+
+@media (max-width: 800px) {
+  .account-forms {
+    grid-template-columns: 1fr;
+  }
+}

@@ -13,7 +13,7 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
 - Cadastro e login, com senha protegida por hash (bcrypt) e autenticação por token JWT.
 - Simulador de crédito: escolha da modalidade, valor e prazo, com cálculo de parcela, total e juros pela Tabela Price.
 - Histórico com as 50 simulações mais recentes de cada usuário; o botão "Ver detalhes" reabre a simulação no simulador, com a modalidade, o valor e o prazo preenchidos.
-- Painel pessoal com as telas Simular crédito, Histórico e Minha conta.
+- Painel pessoal com as telas Simular crédito, Histórico e Minha conta; em Minha conta, o usuário altera o próprio nome e a senha (com a senha atual e a confirmação da nova).
 - Área administrativa (apenas para o papel `ADMIN`):
   - cadastro, edição e ativação/desativação de modalidades;
   - cadastro, edição e ativação/desativação de faixas de juros, com bloqueio de faixas sobrepostas;
@@ -27,7 +27,6 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
 **Planejado**
 
 - Comparação de simulações.
-- Edição dos dados da conta na interface (a API de nome e senha já existe; falta a tela).
 - Preparação para produção e publicação.
 
 ## Tecnologias

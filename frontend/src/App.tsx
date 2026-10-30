@@ -327,6 +327,16 @@ export default function App() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState("");
   const auditRequestRef = useRef(0);
+  const [profileName, setProfileName] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const selectedModality =
     modalities.find((modality) => modality.code === selectedCode) ?? null;
@@ -1020,6 +1030,108 @@ export default function App() {
     }
   }, [view, adminTab, auditPage, auditEntity, auditAction]);
 
+  useEffect(() => {
+    if (view !== "account" || !user) return;
+
+    setProfileName(user.name);
+    setProfileError("");
+    setProfileMessage("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    setPasswordMessage("");
+  }, [view, user?.id]);
+
+  async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      handleSessionExpired();
+      return;
+    }
+
+    setProfileError("");
+    setProfileMessage("");
+    setProfileSaving(true);
+
+    try {
+      const response = await fetch("/api/v1/auth/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: profileName }),
+      });
+
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
+      if (!response.ok) throw new Error(await readError(response));
+
+      const data: { message: string; user: User } = await response.json();
+      setUser(data.user);
+      setProfileName(data.user.name);
+      setProfileMessage(data.message);
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Não foi possível atualizar o nome.");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      handleSessionExpired();
+      return;
+    }
+
+    setPasswordError("");
+    setPasswordMessage("");
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("A confirmação não é igual à nova senha.");
+      return;
+    }
+
+    setPasswordSaving(true);
+
+    try {
+      const response = await fetch("/api/v1/auth/me/password", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
+      if (!response.ok) throw new Error(await readError(response));
+
+      const data: { message: string } = await response.json();
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMessage(data.message);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Não foi possível alterar a senha.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
   function handleSessionExpired() {
     handleLogout();
     setError("Sua sessão expirou. Entre novamente.");
@@ -1048,6 +1160,14 @@ export default function App() {
     setAuditPage(1);
     setAuditEntity("");
     setAuditAction("");
+    setProfileName("");
+    setProfileError("");
+    setProfileMessage("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    setPasswordMessage("");
   }
 
   function useHistorySimulation(item: Simulation) {
@@ -1633,6 +1753,34 @@ export default function App() {
                 <dd>{user.role === "ADMIN" ? "Administrador" : "Cliente"}</dd>
               </div>
             </dl>
+
+            <div className="account-forms">
+              <form className="account-form" onSubmit={handleProfileSubmit}>
+                <h3>Alterar nome</h3>
+                <label htmlFor="profile-name">Nome completo
+                  <input id="profile-name" name="name" type="text" autoComplete="name" value={profileName} onChange={(event) => setProfileName(event.target.value)} minLength={2} maxLength={120} required />
+                </label>
+                {profileError && <p className="error-message" role="alert">{profileError}</p>}
+                {profileMessage && <p className="success-message" role="status">{profileMessage}</p>}
+                <button className="button button-primary" type="submit" disabled={profileSaving}>{profileSaving ? "Salvando..." : "Salvar nome"}</button>
+              </form>
+
+              <form className="account-form" onSubmit={handlePasswordSubmit}>
+                <h3>Alterar senha</h3>
+                <label htmlFor="current-password">Senha atual
+                  <input id="current-password" name="currentPassword" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
+                </label>
+                <label htmlFor="new-password">Nova senha
+                  <input id="new-password" name="newPassword" type="password" autoComplete="new-password" placeholder="Mínimo de 8 caracteres" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={8} maxLength={72} required />
+                </label>
+                <label htmlFor="confirm-password">Confirmar nova senha
+                  <input id="confirm-password" name="confirmPassword" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} maxLength={72} required />
+                </label>
+                {passwordError && <p className="error-message" role="alert">{passwordError}</p>}
+                {passwordMessage && <p className="success-message" role="status">{passwordMessage}</p>}
+                <button className="button button-primary" type="submit" disabled={passwordSaving}>{passwordSaving ? "Salvando..." : "Alterar senha"}</button>
+              </form>
+            </div>
           </section>
         )}
 
