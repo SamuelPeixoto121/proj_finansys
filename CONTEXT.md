@@ -55,6 +55,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - API administrativa de modalidades e de faixas de juros (criar, editar, ativar/desativar), com auditoria e bloqueio de faixas sobrepostas.
 - Interface administrativa com abas: Modalidades (e faixas de juros), Usuários, Métricas e Auditoria, com paginação e filtros.
 - Reutilização de simulações: o botão "Ver detalhes" do histórico reabre a simulação no simulador.
+- Comparação de simulações no histórico: seleção de 2 a 3 itens e tabela lado a lado, com o menor valor de cada linha destacado (valor solicitado e prazo nunca são destacados).
 - Lista de modalidades do simulador atualizada sozinha depois de mudanças no admin.
 - Sessão expirada: o site volta ao login com a mensagem "Sua sessão expirou. Entre novamente.".
 - API administrativa de consulta, só de leitura: `GET /admin/users`, `GET /admin/metrics` e `GET /admin/audit-logs` (paginação com `page` e `pageSize`, e filtros `entity` e `action` na auditoria).
@@ -67,10 +68,9 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
 
-1. Comparação de simulações: escolher 2 ou 3 do histórico e ver lado a lado.
-2. Precisão decimal no cálculo (hoje usa `number` do JavaScript).
-3. Revisão final: telas, textos, documentação e conferência geral. Nessa hora, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
-4. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
+1. Precisão decimal no cálculo (hoje usa `number` do JavaScript).
+2. Revisão final: telas, textos, documentação e conferência geral. Nessa hora, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
+3. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
 
 Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-mail) e recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
 

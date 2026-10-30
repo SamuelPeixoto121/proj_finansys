@@ -1222,3 +1222,92 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Comparação de simulações */
+.history-compare {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-compare input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green-dark);
+}
+
+.history-compare input:disabled {
+  cursor: not-allowed;
+}
+
+.compare-bar {
+  position: sticky;
+  top: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: 1px solid #b7e4cb;
+  border-radius: 12px;
+  background: #f0fbf5;
+  box-shadow: 0 6px 18px rgb(26 42 67 / 8%);
+}
+
+.compare-bar small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
+.compare-card {
+  min-height: 0;
+  margin-bottom: 20px;
+  padding: 24px;
+}
+
+.compare-table th[scope="row"] {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.compare-table thead th {
+  text-align: left;
+}
+
+.compare-table thead th small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.compare-table td.compare-best {
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 700;
+}
+
+.compare-table td.compare-best small {
+  color: #047857;
+  font-weight: 600;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

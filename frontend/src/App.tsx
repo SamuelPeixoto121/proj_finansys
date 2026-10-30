@@ -170,6 +170,8 @@ function formatDate(value?: string): string {
 }
 
 const ADMIN_PAGE_SIZE = 10;
+const MIN_COMPARE = 2;
+const MAX_COMPARE = 3;
 
 const ADMIN_TABS: { id: AdminTab; label: string }[] = [
   { id: "modalities", label: "Modalidades" },
@@ -337,6 +339,8 @@ export default function App() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+  const [comparing, setComparing] = useState(false);
 
   const selectedModality =
     modalities.find((modality) => modality.code === selectedCode) ?? null;
@@ -1132,6 +1136,47 @@ export default function App() {
     }
   }
 
+  const compareItems = compareIds
+    .map((id) => history.find((item) => item.id === id))
+    .filter((item): item is Simulation => item !== undefined);
+
+  const compareRows: {
+    label: string;
+    read: (item: Simulation) => number;
+    text: (item: Simulation) => string;
+    highlight: boolean;
+  }[] = [
+    { label: "Valor solicitado", read: (item) => item.requestedAmount, text: (item) => formatCurrency(item.requestedAmount), highlight: false },
+    { label: "Prazo", read: (item) => item.term, text: (item) => `${item.term} meses`, highlight: false },
+    { label: "Taxa mensal", read: (item) => item.monthlyRatePercent, text: (item) => `${numberFormatter.format(item.monthlyRatePercent)}% a.m.`, highlight: true },
+    { label: "Parcela estimada", read: (item) => item.installmentAmount, text: (item) => formatCurrency(item.installmentAmount), highlight: true },
+    { label: "Total a pagar", read: (item) => item.totalAmount, text: (item) => formatCurrency(item.totalAmount), highlight: true },
+    { label: "Juros totais", read: (item) => item.totalInterest, text: (item) => formatCurrency(item.totalInterest), highlight: true },
+  ];
+
+  function toggleCompare(id: number) {
+    setCompareIds((current) => {
+      if (current.includes(id)) return current.filter((value) => value !== id);
+      return current.length >= MAX_COMPARE ? current : [...current, id];
+    });
+  }
+
+  function clearCompare() {
+    setCompareIds([]);
+    setComparing(false);
+  }
+
+  useEffect(() => {
+    setCompareIds((current) => {
+      const valid = current.filter((id) => history.some((item) => item.id === id));
+      return valid.length === current.length ? current : valid;
+    });
+  }, [history]);
+
+  useEffect(() => {
+    if (comparing && compareItems.length < MIN_COMPARE) setComparing(false);
+  }, [comparing, compareItems.length]);
+
   function handleSessionExpired() {
     handleLogout();
     setError("Sua sessão expirou. Entre novamente.");
@@ -1168,6 +1213,8 @@ export default function App() {
     setConfirmPassword("");
     setPasswordError("");
     setPasswordMessage("");
+    setCompareIds([]);
+    setComparing(false);
   }
 
   function useHistorySimulation(item: Simulation) {
@@ -1420,6 +1467,61 @@ export default function App() {
           </section>
         )}
 
+        {view === "history" && compareItems.length > 0 && (
+          <section className="compare-bar" aria-label="Seleção para comparar" role="status">
+            <span>{compareItems.length} de {MAX_COMPARE} selecionadas</span>
+            <div className="admin-row-actions">
+              <button className="primary-button" type="button" disabled={compareItems.length < MIN_COMPARE} onClick={() => setComparing(true)}>Comparar selecionadas</button>
+              <button className="secondary-button" type="button" onClick={clearCompare}>Limpar seleção</button>
+            </div>
+            {compareItems.length < MIN_COMPARE && <small>Escolha pelo menos {MIN_COMPARE} simulações.</small>}
+            {compareItems.length >= MAX_COMPARE && <small>Limite de {MAX_COMPARE} atingido. Desmarque uma para trocar.</small>}
+          </section>
+        )}
+
+        {view === "history" && comparing && compareItems.length >= MIN_COMPARE && (
+          <section className="info-card compare-card" aria-label="Comparação de simulações">
+            <div className="admin-table-heading">
+              <h2>Comparar simulações</h2>
+              <button className="secondary-button" type="button" onClick={() => setComparing(false)}>Fechar comparação</button>
+            </div>
+            <p className="admin-help">O destaque verde marca o menor valor de cada linha. Ele só indica qual número é menor: se as simulações têm valores ou prazos diferentes, compare com cuidado.</p>
+            <div className="admin-table-wrap">
+              <table className="admin-table compare-table">
+                <thead>
+                  <tr>
+                    <th scope="col"><span className="sr-only">Item</span></th>
+                    {compareItems.map((item) => (
+                      <th scope="col" key={item.id}>{item.modality.name}<small>{formatDate(item.createdAt)}</small></th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareRows.map((row) => {
+                    const values = compareItems.map(row.read);
+                    const lowest = Math.min(...values);
+                    const hasBest = row.highlight && new Set(values).size > 1;
+                    return (
+                      <tr key={row.label}>
+                        <th scope="row">{row.label}</th>
+                        {compareItems.map((item) => {
+                          const best = hasBest && row.read(item) === lowest;
+                          return (
+                            <td key={item.id} className={best ? "compare-best" : undefined}>
+                              {row.text(item)}
+                              {best && <small>menor valor</small>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {view === "history" && (
           <section className="info-card history-card">
             <div className="section-heading">
@@ -1451,6 +1553,15 @@ export default function App() {
                         meses · taxa de{" "}
                         {numberFormatter.format(item.monthlyRatePercent)}% a.m.
                       </span>
+                      <label className="history-compare">
+                        <input
+                          type="checkbox"
+                          checked={compareIds.includes(item.id)}
+                          disabled={!compareIds.includes(item.id) && compareIds.length >= MAX_COMPARE}
+                          onChange={() => toggleCompare(item.id)}
+                        />
+                        Comparar
+                      </label>
                     </div>
 
                     <div className="history-item-total">
