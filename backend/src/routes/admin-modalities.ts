@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { PoolConnection } from "mysql2/promise";
 import { pool } from "../database.js";
+import { MAX_PRINCIPAL, MAX_TERM_MONTHS } from "../domain/credit-calculator.js";
 import type { AuthenticatedUser } from "../middleware/require-auth.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireAdmin } from "../middleware/require-admin.js";
@@ -73,6 +74,14 @@ function parseInput(body: unknown): { value?: ModalityInput; error?: string } {
     (maxTerm as number) < (minTerm as number)
   ) {
     return { error: "Informe limites de prazo inteiros e válidos." };
+  }
+  if ((maxTerm as number) > MAX_TERM_MONTHS) {
+    return {
+      error: `O prazo máximo da modalidade é de ${MAX_TERM_MONTHS} meses.`,
+    };
+  }
+  if (maxAmount > MAX_PRINCIPAL) {
+    return { error: "O valor máximo da modalidade é grande demais." };
   }
 
   return {

@@ -27,7 +27,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 - `app.ts`: monta o Express e registra as rotas; no final há a resposta `404` em JSON.
 - `config.ts`, `database.ts`, `server.ts`, `migrate.ts`: configuração, conexão, inicialização e executor das migrações.
-- `domain/credit-calculator.ts`: cálculo da Tabela Price.
+- `domain/credit-calculator.ts`: cálculo exato da Tabela Price com `BigInt` (parcela arredondada ao centavo, total = parcela x prazo com juros, total = valor pedido sem juros, juros nunca negativos, prazo até 1.200 meses). Os testes usam valores de referência calculados à parte, em Python (`Fractions`).
 - `domain/rate-range-rules.ts`: validação e sobreposição das faixas de juros.
 - `middleware/require-auth.ts` e `require-admin.ts`: autenticação por JWT e exigência do papel `ADMIN`.
 - `middleware/auth-rate-limit.ts`: limite de tentativas do login e do cadastro.
@@ -51,7 +51,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 **Pronto e testado**
 
 - Cadastro, login, JWT com validade de 15 minutos e `GET /auth/me`.
-- Simulador, com cálculo, salvamento e histórico das 50 simulações mais recentes.
+- Simulador, com cálculo exato, salvamento e histórico das 50 simulações mais recentes.
 - API administrativa de modalidades e de faixas de juros (criar, editar, ativar/desativar), com auditoria e bloqueio de faixas sobrepostas.
 - Interface administrativa com abas: Modalidades (e faixas de juros), Usuários, Métricas e Auditoria, com paginação e filtros.
 - Reutilização de simulações: o botão "Ver detalhes" do histórico reabre a simulação no simulador.
@@ -62,15 +62,14 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Limite de tentativas: login (5 erros por conta e 20 por IP a cada 15 minutos) e cadastro (10 por IP por hora), em memória, com `429` e `Retry-After`; `TRUST_PROXY` opcional para hospedagem atrás de proxy.
 - Endurecimento da API: erros sempre em JSON e sem stack trace (`400`, `413`, `500` genérico), corpo limitado a 10 KB, cabeçalhos de segurança e login com o mesmo tempo de resposta quando o e-mail não existe.
 - Edição da conta: `PATCH /auth/me` (nome) e `PATCH /auth/me/password` (exige a senha atual; limite de 5 erros por usuário a cada 15 minutos), com os formulários em Minha conta. E-mail e papel não são editáveis.
-- 102 testes automatizados passando no backend.
+- 113 testes automatizados passando no backend.
 
 **Pendente, em ordem sugerida**
 
 Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
 
-1. Precisão decimal no cálculo (hoje usa `number` do JavaScript).
-2. Revisão final: telas, textos, documentação e conferência geral. Nessa hora, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
-3. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
+1. Revisão final: telas, textos, documentação e conferência geral. Nessa hora, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
+2. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
 
 Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-mail) e recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
 
@@ -89,10 +88,11 @@ Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-m
 - **Codificação dos arquivos:** o `App.tsx` já chegou a ficar com os acentos corrompidos (`nÃ£o` em vez de `não`) depois de um script do PowerShell reescrever o arquivo sem informar UTF-8. Prefira editar os arquivos no VS Code, e se usar PowerShell, informe a codificação UTF-8 sem BOM.
 - **A pasta `tests` tem o seu próprio `tsconfig.json`.** O `tsconfig.json` do backend só inclui `src`; não adicione arquivos de teste ao `include` dele.
 - Mudar o papel de um usuário no banco só vale depois de um novo login, porque o papel vai dentro do token.
+- **Arquivos que começam com ponto** (como `backend/.env.example` e `.gitignore`) podem ser baixados sem o ponto (`env.example`). Confira o nome antes de copiar para o projeto, ou o Git vai registrar o arquivo certo como apagado.
 
 ## Limitações conhecidas
 
-- Cálculo com o tipo `number` do JavaScript (precisão decimal limitada, adequada para a demonstração).
+- O cálculo é exato, mas simplificado (Tabela Price com taxa fixa, sem tarifas, IOF, seguros nem CET). Simulações antigas, gravadas antes do cálculo exato, mantêm os valores da época.
 - Sem renovação de sessão; o token fica no `sessionStorage`.
 - Sem recuperação de senha nem confirmação de e-mail; o cadastro revela se um e-mail já existe (`409`).
 - O papel do usuário vai dentro do token: uma mudança de papel só vale depois de um novo login ou da expiração do token (até 15 minutos).

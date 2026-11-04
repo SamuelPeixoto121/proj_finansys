@@ -11,7 +11,7 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
 **Já implementado**
 
 - Cadastro e login, com senha protegida por hash (bcrypt) e autenticação por token JWT.
-- Simulador de crédito: escolha da modalidade, valor e prazo, com cálculo de parcela, total e juros pela Tabela Price.
+- Simulador de crédito: escolha da modalidade, valor e prazo, com cálculo de parcela, total e juros pela Tabela Price. O cálculo é exato, feito em centavos com aritmética de inteiros (sem erro de ponto flutuante), e o total sempre fecha com a parcela vezes o prazo.
 - Histórico com as 50 simulações mais recentes de cada usuário; o botão "Ver detalhes" reabre a simulação no simulador, com a modalidade, o valor e o prazo preenchidos.
 - Comparação de simulações: o usuário marca de 2 a 3 simulações do histórico e vê uma tabela lado a lado (valor, prazo, taxa, parcela, total e juros), com o menor valor de cada linha destacado.
 - Painel pessoal com as telas Simular crédito, Histórico e Minha conta; em Minha conta, o usuário altera o próprio nome e a senha (com a senha atual e a confirmação da nova).
@@ -183,7 +183,7 @@ Rotas inexistentes respondem `404` em JSON. Todas as ações administrativas exi
 
 ## Regras de negócio e decisões
 
-- **Cálculo:** parcelas fixas pela Tabela Price, com arredondamento para centavos. Taxa zero divide o valor igualmente pelo prazo.
+- **Cálculo:** parcelas fixas pela Tabela Price, em aritmética exata de inteiros (`BigInt`), sem `Math.pow` nem ponto flutuante. A parcela é arredondada para o centavo mais próximo, com o meio centavo para cima. Com juros, o total é a parcela vezes o prazo, para a conta fechar na tela. Sem juros, o total é o valor pedido e os juros são zero. Os juros nunca ficam negativos. O prazo vai até 1.200 meses.
 - **Faixas de juros:** cada faixa define a taxa mensal para um intervalo de prazos. Em uma modalidade, as faixas **ativas** não podem se sobrepor, e cada faixa deve caber nos limites de prazo da modalidade. Uma modalidade sem faixa ativa para o prazo escolhido não pode ser simulada.
 - **Sem exclusão:** modalidades e faixas são desativadas, não apagadas. As chaves estrangeiras usam `RESTRICT` para preservar o histórico.
 - **Identidade vem do token:** o usuário de uma simulação é sempre o do token, nunca um valor enviado no corpo da requisição.
@@ -214,7 +214,8 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 
 ## Limitações conhecidas
 
-- O cálculo usa o tipo `number` do JavaScript com arredondamento para centavos. Em um sistema financeiro real seria necessária precisão decimal.
+- O cálculo é exato, mas é uma simulação simplificada: Tabela Price com taxa mensal fixa, sem tarifas, IOF, seguros nem custo efetivo total (CET).
+- Simulações gravadas antes do cálculo exato mantêm os valores da época: o total delas pode diferir em alguns centavos de parcela vezes prazo.
 - Não há renovação de sessão: o login dura 15 minutos e depois é preciso entrar de novo. O token fica no `sessionStorage` do navegador.
 - Não há recuperação de senha nem confirmação de e-mail. O cadastro avisa quando um e-mail já existe (`409`), o que permite descobrir contas; o limite de cadastros por IP reduz o abuso.
 - Depois de trocar a senha, os logins já abertos continuam valendo até o token expirar (até 15 minutos).
