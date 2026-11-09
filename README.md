@@ -4,6 +4,8 @@ Plataforma web de **simulação e gestão de operações de crédito**, desenvol
 
 > **Projeto educacional.** O FinanSys não concede crédito, não movimenta dinheiro, não consulta Serasa nem qualquer serviço real de análise de crédito. As taxas cadastradas são **fictícias** e servem apenas para demonstração.
 
+**Site publicado:** [proj-finansys.onrender.com](https://proj-finansys.onrender.com). Na hospedagem gratuita, a primeira visita depois de um tempo parado pode levar cerca de 1 minuto para carregar.
+
 Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.md).
 
 ## Funcionalidades
@@ -24,10 +26,7 @@ Para retomar o desenvolvimento, veja o resumo técnico em [CONTEXT.md](CONTEXT.m
 - Limite de tentativas: no login, 5 erros por conta e 20 por IP a cada 15 minutos; no cadastro, 10 por IP por hora; na troca de senha, 5 erros por usuário a cada 15 minutos. Acima disso a API responde `429` com o tempo de espera.
 - Erros de requisição (JSON inválido, corpo grande demais, falhas internas) respondem em JSON, sem expor detalhes do servidor, e a API envia cabeçalhos de segurança.
 - Testes automatizados do cálculo, da autenticação, das permissões, das regras das faixas de juros e das rotas.
-
-**Planejado**
-
-- Preparação para produção e publicação.
+- Publicado na Render, com o banco no TiDB Cloud (conexão com TLS).
 
 ## Tecnologias
 
@@ -121,7 +120,7 @@ O arquivo `.env` fica fora do Git e nunca deve ser publicado.
 
 Para um banco na nuvem que exige conexão segura (como o TiDB Cloud), defina também `DB_SSL=true`. O certificado do servidor é sempre conferido, sem precisar de arquivo extra. Com o MySQL local, deixe a variável de fora.
 
-Se a API ficar atrás de um proxy reverso (comum em hospedagens), defina também `TRUST_PROXY=1`. Sem isso, o limite de tentativas enxerga o IP do proxy em vez do IP de cada visitante. Em desenvolvimento local, não use essa variável.
+Se a API ficar atrás de proxies reversos (comum em hospedagens), defina também `TRUST_PROXY` com o número de proxies na frente dela (veja a seção "Publicação"). Em desenvolvimento local, não use essa variável.
 
 **4. Criar as tabelas e os dados iniciais:**
 
@@ -165,7 +164,7 @@ Todos rodam na raiz do projeto.
 
 ## Publicação
 
-O FinanSys roda como um único serviço Node (a API entrega também o site) ligado a um banco compatível com MySQL. A hospedagem escolhida é a Render, com o banco no TiDB Cloud.
+O FinanSys roda como um único serviço Node (a API entrega também o site) ligado a um banco compatível com MySQL. Ele está publicado na Render (região Virginia, plano gratuito), com o banco no TiDB Cloud (região São Paulo, plano gratuito).
 
 | Configuração | Valor |
 | --- | --- |
@@ -183,7 +182,9 @@ Variáveis de ambiente do serviço:
 | `JWT_SECRET` | segredo novo, com pelo menos 32 caracteres (não reaproveite o do ambiente local) |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | dados do banco (no TiDB Cloud, a porta é 4000) |
 | `DB_SSL` | `true` |
-| `TRUST_PROXY` | `1` (a confirmar no ambiente publicado) |
+| `TRUST_PROXY` | `2` |
+
+Sobre o `TRUST_PROXY` na Render: os testes no ar mostraram que, com `1`, o app vê o IP de dois proxies internos da Render (compartilhados por todos os visitantes), e o limite de cadastros por IP passaria a valer para o site inteiro. Com `2`, o IP visto muda a cada requisição, então o limite por IP fica praticamente desligado e ninguém é bloqueado por engano. Nos dois casos, um `X-Forwarded-For` forjado pelo visitante é ignorado. A proteção principal contra quem tenta adivinhar senhas é o limite por conta, que não depende de IP.
 
 O servidor não inicia sem um `JWT_SECRET` válido nem, em produção, sem `DB_HOST`. As migrações são aplicadas a partir de um computador com o `backend/.env` apontando para o banco de produção: `npm run db:migrate`.
 
@@ -228,7 +229,7 @@ Rotas inexistentes respondem `404` em JSON. Todas as ações administrativas exi
 - Senhas guardadas apenas como hash bcrypt (custo 12), com mínimo de 8 caracteres.
 - Token JWT assinado com HS256 e validade de 15 minutos; o segredo vem de variável de ambiente e deve ter pelo menos 32 caracteres.
 - Permissões verificadas no backend: usuário comum recebe `403` nas rotas administrativas.
-- Limite de tentativas no login e no cadastro, contado a cada requisição (tentativas simultâneas não furam o limite) e com o IP real só quando há proxy confiável configurado (`TRUST_PROXY`).
+- Limite de tentativas no login e no cadastro, contado a cada requisição (tentativas simultâneas não furam o limite). O IP só é lido dos cabeçalhos de proxy quando `TRUST_PROXY` está configurado, e um `X-Forwarded-For` forjado pelo visitante não é usado.
 - Erros sempre em JSON e sem stack trace: JSON inválido responde `400`, corpo acima de 10 KB responde `413` e falhas inesperadas respondem `500` genérico (o detalhe fica só no log do servidor).
 - Cabeçalhos `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` e `Referrer-Policy: no-referrer` nas respostas da API; ela não anuncia que usa Express.
 - O login leva o mesmo tempo quando o e-mail não existe, para não revelar quais contas existem pelo tempo de resposta.
@@ -255,6 +256,8 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 - Depois de trocar a senha, os logins já abertos continuam valendo até o token expirar (até 15 minutos).
 - Os contadores do limite de tentativas ficam na memória do servidor: zeram quando ele reinicia e não são compartilhados entre várias instâncias.
 - Na hospedagem gratuita, o site dorme depois de 15 minutos sem visitas, e a primeira visita seguinte leva cerca de 1 minuto para carregar.
+- No site publicado, o limite de tentativas por IP não enxerga o IP real do visitante, por causa dos proxies da Render (veja "Publicação"). Os limites por conta (login) e por usuário (troca de senha) funcionam normalmente.
+- No site publicado, o cadastro e o login levam alguns segundos (cerca de 4 s medidos), provavelmente pelo hash bcrypt de custo 12 no processador do plano gratuito. Como a Render fica nos EUA e o banco em São Paulo, cada ação soma também a distância entre os dois (uma simulação levou cerca de 1 s).
 
 ## Licença
 

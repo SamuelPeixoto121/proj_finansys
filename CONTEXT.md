@@ -62,15 +62,15 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Lista de modalidades do simulador atualizada sozinha depois de mudanças no admin.
 - Sessão expirada: o site volta ao login com a mensagem "Sua sessão expirou. Entre novamente.".
 - API administrativa de consulta, só de leitura: `GET /admin/users`, `GET /admin/metrics` e `GET /admin/audit-logs` (paginação com `page` e `pageSize`, e filtros `entity` e `action` na auditoria).
-- Limite de tentativas: login (5 erros por conta e 20 por IP a cada 15 minutos) e cadastro (10 por IP por hora), em memória, com `429` e `Retry-After`; `TRUST_PROXY` opcional para hospedagem atrás de proxy.
+- Limite de tentativas: login (5 erros por conta e 20 por IP a cada 15 minutos) e cadastro (10 por IP por hora), em memória, com `429` e `Retry-After`; `TRUST_PROXY` para hospedagem atrás de proxy (na Render está `2`; veja a seção Publicação abaixo).
 - Endurecimento da API: erros sempre em JSON e sem stack trace (`400`, `413`, `500` genérico), corpo limitado a 10 KB, cabeçalhos de segurança e login com o mesmo tempo de resposta quando o e-mail não existe.
 - Edição da conta: `PATCH /auth/me` (nome) e `PATCH /auth/me/password` (exige a senha atual; limite de 5 erros por usuário a cada 15 minutos), com os formulários em Minha conta. E-mail e papel não são editáveis.
 - 135 testes automatizados passando no backend.
 - Revisão final do código (09/11/2026): `npm audit` sem vulnerabilidades, contraste dos textos melhorado, favicon, aviso de projeto educacional (taxas fictícias) no login, no simulador e no rodapé, mensagens de falha de conexão pensadas para o visitante (não para o desenvolvedor), detalhes da auditoria traduzidos, README atualizado e licença MIT (`LICENSE`).
 
-**Pendente, em ordem sugerida**
+**Publicação (concluída em 09/11/2026)**
 
-Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
+O projeto está completo e publicado em https://proj-finansys.onrender.com. Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
 
 A conferência visual foi feita em 09/11/2026 (todas as telas, em computador e celular); ela achou e corrigiu o resultado da simulação sem destaque (regra `.info-card > p` passando por cima das classes próprias).
 
@@ -80,7 +80,15 @@ A conferência visual foi feita em 09/11/2026 (todas as telas, em computador e c
 2. ~~Conta no TiDB~~ (feito em 09/11/2026): cluster gratuito em **São Paulo (`sa-east-1`)**, TiDB v8.5.3. Os dados de acesso ficam em `backend/.env.tidb` (ignorado pelo Git; a senha nunca vai para o chat). Para rodar algo contra o TiDB a partir do computador local: `npx tsx --env-file=.env.tidb src/migrate.ts` (dentro de `backend`); o `dotenv` não sobrescreve as variáveis que já vieram do arquivo.
    - Decisão sobre a região: a Render não tem servidores no Brasil, então cada consulta ao banco vai e volta entre a Virgínia e São Paulo (estimativa de cerca de 120 ms, não medida). Isso dá cerca de 0,5 s a mais numa simulação. O usuário preferiu manter São Paulo, sabendo disso; trocar depois exigiria exportar e importar os dados.
 3. ~~Migrações e testes no TiDB~~ (feito em 09/11/2026): as duas migrações aplicadas (6 tabelas, 3 modalidades, 9 faixas). Chaves estrangeiras ligadas e com `RESTRICT` funcionando. `tidb_enable_check_constraint` está `OFF`: o banco aceita as restrições `CHECK` sem aplicá-las, e a validação fica só na API. O fuso do banco é UTC. O site completo (cadastro, login, simulação, histórico) funcionou ligado ao TiDB, e depois de 400 s sem acesso o pool abriu uma conexão nova sem erro. O banco foi deixado sem dados de teste.
-4. Publicar na Render, na região **Virginia (US East)**, e testar o site no ar. Conferir ali se `TRUST_PROXY=1` faz o limite de tentativas enxergar o IP real do visitante.
+4. ~~Publicar na Render~~ (feito em 09/11/2026): serviço web gratuito na região **Virginia (US East)**, com as variáveis da seção "Publicação" do README. Testado no ar: rotas, cabeçalhos, `http` redirecionando para `https`, cadastro, login, simulações, histórico, comparação, sessão ao recarregar, celular e datas no horário de Brasília. Tempos medidos: cadastro 4,1 s, login 3,6 s e simulação de 1,0 a 1,4 s. O banco de produção foi deixado sem dados de teste.
+   - `TRUST_PROXY`: com `1`, o app via o IP de dois proxies internos da Render que se alternavam (os limites por IP valeriam para todos os visitantes juntos). Com `2`, o IP visto muda a cada requisição (limite por IP praticamente desligado, sem bloquear ninguém por engano). Nos dois casos, um `X-Forwarded-For` forjado foi ignorado. Ficou `2`, por decisão do usuário, para terminar o projeto. A documentação da Render sobre isso não foi encontrada.
+
+**Melhorias futuras possíveis (não planejadas)**
+
+- Descobrir o IP real do visitante na Render: uma rota de diagnóstico temporária, ligada por variável de ambiente, para ver os cabeçalhos que chegam ao app (`X-Forwarded-For` completo, `CF-Connecting-IP`, `X-Real-IP`) e então ajustar o `TRUST_PROXY` ou ler o cabeçalho certo.
+- Login e cadastro mais rápidos no ar: baixar o custo do bcrypt de 12 para 10 (cerca de 4 vezes mais rápido; não foi medido no servidor se o bcrypt é mesmo a causa).
+- Banco mais perto da Render: recriar o cluster do TiDB em `us-east-1`, exportando e importando os dados.
+- Criar a conta de administrador do site publicado: cadastrar pelo site e promover no TiDB com `UPDATE users SET role = 'ADMIN' WHERE email = '...';`.
 
 Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-mail) e recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
 
