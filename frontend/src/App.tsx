@@ -192,20 +192,53 @@ const AUDIT_ENTITY_LABELS: Record<string, string> = {
   INTEREST_RATE_RANGE: "Faixa de juros",
 };
 
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  code: "Código",
+  name: "Nome",
+  description: "Descrição",
+  minAmount: "Valor mínimo",
+  maxAmount: "Valor máximo",
+  minTerm: "Prazo mínimo",
+  maxTerm: "Prazo máximo",
+  monthlyRatePercent: "Taxa mensal",
+  active: "Ativa",
+  before: "Antes",
+  after: "Depois",
+};
+
+function describeAuditValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "sim" : "não";
+
+  if (typeof value === "number") {
+    if (key === "minAmount" || key === "maxAmount") return formatCurrency(value);
+    if (key === "monthlyRatePercent") return `${rateFormatter.format(value)}% a.m.`;
+    if (key === "minTerm" || key === "maxTerm") return `${value} meses`;
+    return String(value);
+  }
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return `(${describeAuditEntries(value as Record<string, unknown>)})`;
+  }
+
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function describeAuditEntries(entries: Record<string, unknown>): string {
+  return Object.entries(entries)
+    .map(([key, value]) => `${AUDIT_FIELD_LABELS[key] ?? key}: ${describeAuditValue(key, value)}`)
+    .join(" · ");
+}
+
 function describeMetadata(metadata: unknown): string {
   if (metadata === null || metadata === undefined) return "—";
   if (typeof metadata !== "object" || Array.isArray(metadata)) {
     return String(metadata);
   }
 
-  const entries = Object.entries(metadata as Record<string, unknown>);
-  if (entries.length === 0) return "—";
+  if (Object.keys(metadata).length === 0) return "—";
 
-  return entries
-    .map(([key, value]) =>
-      `${key}: ${typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)}`,
-    )
-    .join(" · ");
+  return describeAuditEntries(metadata as Record<string, unknown>);
 }
 
 function Pager({
@@ -240,12 +273,15 @@ function Pager({
   );
 }
 
+const CONNECTION_ERROR =
+  "Não foi possível conectar ao servidor. Tente novamente em instantes.";
+
 async function readError(response: Response): Promise<string> {
   try {
     const body: { error?: string } = await response.json();
     return body.error ?? "Ocorreu um erro inesperado.";
   } catch {
-    return "Não foi possível interpretar a resposta do servidor.";
+    return "O servidor não respondeu como esperado. Tente novamente em instantes.";
   }
 }
 
@@ -375,9 +411,7 @@ export default function App() {
         setUser(data.user);
       } catch {
         if (!controller.signal.aborted) {
-          setError(
-            "Não foi possível conectar à API. Verifique se o backend está ligado.",
-          );
+          setError(CONNECTION_ERROR);
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -534,9 +568,7 @@ export default function App() {
       setPassword("");
       setView("simulator");
     } catch {
-      setError(
-        "Não foi possível conectar à API. Verifique se o backend está ligado.",
-      );
+      setError(CONNECTION_ERROR);
     } finally {
       setSubmitting(false);
     }
@@ -582,9 +614,7 @@ export default function App() {
       setName("");
       setPassword("");
     } catch {
-      setError(
-        "Não foi possível conectar à API. Verifique se o backend está ligado.",
-      );
+      setError(CONNECTION_ERROR);
     } finally {
       setSubmitting(false);
     }
@@ -1403,8 +1433,9 @@ export default function App() {
               )}
 
               <p className="simulation-disclaimer">
-                Os valores são estimativas para fins de planejamento. Não
-                representam uma oferta ou aprovação de crédito.
+                Projeto educacional: as taxas são fictícias e os valores são
+                apenas estimativas. Não representam uma oferta ou aprovação de
+                crédito.
               </p>
             </article>
 
@@ -1635,7 +1666,7 @@ export default function App() {
                   <article className="admin-metric-card">
                     <span>Usuários</span>
                     <strong>{adminMetrics.users.total}</strong>
-                    <small>{adminMetrics.users.admins} administrador(es)</small>
+                    <small>{adminMetrics.users.admins} {adminMetrics.users.admins === 1 ? "administrador" : "administradores"}</small>
                   </article>
                   <article className="admin-metric-card">
                     <span>Simulações</span>
@@ -1779,7 +1810,7 @@ export default function App() {
                       <tr key={modality.id}>
                         <td><strong>{modality.name}</strong><small>{modality.code}</small></td>
                         <td>{formatCurrency(modality.limits.minAmount)} – {formatCurrency(modality.limits.maxAmount)}<small>{modality.limits.minTerm}–{modality.limits.maxTerm} meses</small></td>
-                        <td>{modality.rateRangeCount} faixa(s)</td>
+                        <td>{modality.rateRangeCount} {modality.rateRangeCount === 1 ? "faixa" : "faixas"}</td>
                         <td><span className={modality.active ? "admin-status active" : "admin-status inactive"}>{modality.active ? "Ativa" : "Inativa"}</span></td>
                         <td><div className="admin-row-actions">
                           <button className="secondary-button" type="button" onClick={() => editAdminModality(modality)}>Editar</button>
@@ -1897,7 +1928,7 @@ export default function App() {
 
         <footer className="footer">
           <span>FinanSys</span>
-          <span>Simulações para planejamento financeiro.</span>
+          <span>Projeto educacional · taxas fictícias.</span>
         </footer>
       </main>
     );
@@ -2041,7 +2072,10 @@ export default function App() {
           </p>
         </div>
 
-        <footer className="form-footer">Projeto de portfólio · FinanSys</footer>
+        <footer className="form-footer">
+          Projeto educacional de portfólio · Taxas fictícias, sem concessão de
+          crédito real.
+        </footer>
       </section>
     </main>
   );
