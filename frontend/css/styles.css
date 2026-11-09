@@ -13,7 +13,7 @@
   --green: #a5edc0;
   --green-dark: #157347;
   --text: #172235;
-  --muted: #6d788b;
+  --muted: #5f6b7e;
   --border: #e3e8ef;
 }
 
@@ -239,7 +239,7 @@ button {
 }
 
 .login-card input::placeholder {
-  color: #9aa4b3;
+  color: #687386;
 }
 
 .login-card input:focus {
@@ -347,12 +347,12 @@ button {
   justify-content: center;
   gap: 9px;
   margin-top: 28px;
-  color: #7b8798;
+  color: var(--muted);
   font-size: 0.8rem;
 }
 
 .security-note span {
-  color: #339968;
+  color: var(--green-dark);
   font-size: 0.68rem;
 }
 
@@ -361,7 +361,7 @@ button {
   right: 24px;
   bottom: 20px;
   left: 24px;
-  color: #8b95a4;
+  color: var(--muted);
   font-size: 0.75rem;
   text-align: center;
 }
@@ -512,7 +512,7 @@ button {
   justify-content: space-between;
   gap: 18px;
   border-top: 1px solid var(--border);
-  color: #7b8798;
+  color: var(--muted);
   font-size: 0.8rem;
 }
 
@@ -612,7 +612,7 @@ button {
 }
 
 .user-greeting {
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
@@ -629,7 +629,7 @@ button {
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #64748b;
+  color: var(--muted);
   cursor: pointer;
   font: inherit;
   font-weight: 600;
@@ -649,7 +649,7 @@ button {
 }
 
 .dashboard-loading {
-  color: #64748b;
+  color: var(--muted);
   margin: 16px 0;
 }
 
@@ -683,7 +683,7 @@ button {
 }
 
 .section-heading > p:last-child {
-  color: #64748b;
+  color: var(--muted);
   line-height: 1.6;
 }
 
@@ -738,7 +738,7 @@ button {
 
 .simulation-disclaimer {
   margin: 20px 0 0;
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.6;
 }
@@ -750,7 +750,7 @@ button {
 
 .result-label {
   margin: 28px 0 8px;
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
@@ -765,7 +765,7 @@ button {
 
 .result-subtitle {
   margin: 8px 0 24px;
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
@@ -795,7 +795,7 @@ button {
 
 .result-details dt,
 .account-details dt {
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.88rem;
 }
 
@@ -827,7 +827,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  color: #64748b;
+  color: var(--muted);
   text-align: center;
   line-height: 1.7;
 }
@@ -889,7 +889,7 @@ button {
 .history-date,
 .history-description,
 .history-item-total span {
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.5;
 }
@@ -907,7 +907,7 @@ button {
   padding: 22px;
   border-radius: 10px;
   background: #f8fafc;
-  color: #64748b;
+  color: var(--muted);
   line-height: 1.7;
 }
 
