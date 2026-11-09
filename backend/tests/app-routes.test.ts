@@ -3,6 +3,10 @@ import { after, before, test } from "node:test";
 import jwt from "jsonwebtoken";
 import request from "supertest";
 import app from "../src/app.js";
+import { pool } from "../src/database.js";
+
+// O pool mantém um temporizador de limpeza de conexões; sem encerrá-lo, o teste não termina.
+after(() => pool.end());
 
 const secret = "finansys-routes-test-secret-32-characters-minimum";
 

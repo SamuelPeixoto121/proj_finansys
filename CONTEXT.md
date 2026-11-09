@@ -27,6 +27,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 - `app.ts`: monta o Express e registra as rotas; no final há a resposta `404` em JSON.
 - `config.ts`, `database.ts`, `server.ts`, `migrate.ts`: configuração, conexão, inicialização e executor das migrações.
+- `database-options.ts`: opções do pool do MySQL. `DB_SSL=true` liga o TLS com conferência do certificado. O pool fecha conexões paradas há mais de 60 segundos (o TiDB derruba as paradas por cerca de 340 s); para isso `maxIdle` precisa ficar menor que `connectionLimit`. Essa limpeza usa um temporizador: todo teste que importar `app.ts` ou `database.ts` precisa de `after(() => pool.end())`, senão não termina.
 - `domain/credit-calculator.ts`: cálculo exato da Tabela Price com `BigInt` (parcela arredondada ao centavo, total = parcela x prazo com juros, total = valor pedido sem juros, juros nunca negativos, prazo até 1.200 meses). Os testes usam valores de referência calculados à parte, em Python (`Fractions`).
 - `domain/rate-range-rules.ts`: validação e sobreposição das faixas de juros.
 - `middleware/require-auth.ts` e `require-admin.ts`: autenticação por JWT e exigência do papel `ADMIN`.
@@ -63,7 +64,7 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Limite de tentativas: login (5 erros por conta e 20 por IP a cada 15 minutos) e cadastro (10 por IP por hora), em memória, com `429` e `Retry-After`; `TRUST_PROXY` opcional para hospedagem atrás de proxy.
 - Endurecimento da API: erros sempre em JSON e sem stack trace (`400`, `413`, `500` genérico), corpo limitado a 10 KB, cabeçalhos de segurança e login com o mesmo tempo de resposta quando o e-mail não existe.
 - Edição da conta: `PATCH /auth/me` (nome) e `PATCH /auth/me/password` (exige a senha atual; limite de 5 erros por usuário a cada 15 minutos), com os formulários em Minha conta. E-mail e papel não são editáveis.
-- 113 testes automatizados passando no backend.
+- 119 testes automatizados passando no backend.
 - Revisão final do código (09/11/2026): `npm audit` sem vulnerabilidades, contraste dos textos melhorado, favicon, aviso de projeto educacional (taxas fictícias) no login, no simulador e no rodapé, mensagens de falha de conexão pensadas para o visitante (não para o desenvolvedor), detalhes da auditoria traduzidos, README atualizado e licença MIT (`LICENSE`).
 
 **Pendente, em ordem sugerida**
@@ -74,7 +75,7 @@ A conferência visual foi feita em 09/11/2026 (todas as telas, em computador e c
 
 **Hospedagem decidida: gratuita.** Banco no **TiDB Cloud** (plano gratuito, compatível com MySQL) e API com o site compilado na **Render** (plano gratuito: dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar). O que a documentação do TiDB diz: conta sem cartão; 5 GiB e 50 milhões de unidades de uso por mês (se a cota acabar, recusa conexões até o mês virar); TLS obrigatório no endereço público, porta 4000, com certificado reconhecido pelo Node sem arquivo extra; conexões paradas caem depois de cerca de 340 segundos. Não confirmado: se o banco "dorme" e quanto demora para voltar, e a compatibilidade completa. Plano B: MySQL pago, cerca de US$ 11 a 15 por mês. Aiven, Railway, Fly.io e Cloud Run foram descartados.
 
-1. Preparar o código para produção, uma etapa por vez, cada uma com testes e commit: TLS opcional por variável de ambiente; renovação das conexões do pool antes dos 340 segundos; o backend entregando o site compilado; scripts de build e de início; configuração de `NODE_ENV` e `TRUST_PROXY`.
+1. Preparar o código para produção, uma etapa por vez, cada uma com testes e commit: ~~TLS opcional por variável de ambiente; renovação das conexões do pool antes dos 340 segundos~~ (feito: `DB_SSL` e limpeza do pool); o backend entregando o site compilado; scripts de build e de início; configuração de `NODE_ENV` e `TRUST_PROXY`.
 2. O usuário cria a conta no TiDB e pega host, usuário e senha. A senha fica só no `backend/.env` local e nas variáveis da Render, nunca no chat nem no Git.
 3. Rodar as migrações e testar no TiDB de verdade. Pontos de atenção: as restrições `CHECK` das migrações (o TiDB pode aceitá-las sem aplicá-las, mas a API já valida os mesmos dados) e as chaves estrangeiras com `RESTRICT`.
 4. Publicar na Render e testar o site no ar.

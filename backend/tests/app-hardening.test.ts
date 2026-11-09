@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { after } from "node:test";
 import express from "express";
 import request from "supertest";
 import app from "../src/app.js";
+import { pool } from "../src/database.js";
 import { errorHandler } from "../src/middleware/error-handler.js";
+
+// O pool mantém um temporizador de limpeza de conexões; sem encerrá-lo, o teste não termina.
+after(() => pool.end());
 
 function assertNoLeak(text: string) {
   assert.ok(!/<html|<!doctype/i.test(text), "não deve devolver HTML");

@@ -119,6 +119,8 @@ node -p "require('crypto').randomBytes(48).toString('hex')"
 
 O arquivo `.env` fica fora do Git e nunca deve ser publicado.
 
+Para um banco na nuvem que exige conexão segura (como o TiDB Cloud), defina também `DB_SSL=true`. O certificado do servidor é sempre conferido, sem precisar de arquivo extra. Com o MySQL local, deixe a variável de fora.
+
 Se a API ficar atrás de um proxy reverso (comum em hospedagens), defina também `TRUST_PROXY=1`. Sem isso, o limite de tentativas enxerga o IP do proxy em vez do IP de cada visitante. Em desenvolvimento local, não use essa variável.
 
 **4. Criar as tabelas e os dados iniciais:**

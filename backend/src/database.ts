@@ -1,12 +1,5 @@
 import mysql from "mysql2/promise";
 import { config } from "./config.js";
+import { createPoolOptions } from "./database-options.js";
 
-export const pool = mysql.createPool({
-  host: config.database.host,
-  port: config.database.port,
-  user: config.database.user,
-  password: config.database.password,
-  database: config.database.name,
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+export const pool = mysql.createPool(createPoolOptions(config.database));
