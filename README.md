@@ -158,9 +158,34 @@ Todos rodam na raiz do projeto.
 | `npm run dev:backend` | Inicia a API em modo de desenvolvimento |
 | `npm run dev:frontend` | Inicia o frontend em modo de desenvolvimento |
 | `npm run build` | Compila o backend e o frontend |
+| `npm start` | Inicia a API compilada (em produção, com `NODE_ENV=production`, ela também entrega o site) |
 | `npm test` | Executa os testes do backend |
 | `npm run typecheck` | Verifica os tipos do backend |
 | `npm run db:migrate` | Aplica as migrações pendentes no banco |
+
+## Publicação
+
+O FinanSys roda como um único serviço Node (a API entrega também o site) ligado a um banco compatível com MySQL. A hospedagem escolhida é a Render, com o banco no TiDB Cloud.
+
+| Configuração | Valor |
+| --- | --- |
+| Comando de build | `npm ci --include=dev && npm run build` |
+| Comando de início | `npm start` |
+| Versão do Node | 22 ou mais nova (definida em `engines` no `package.json`) |
+
+O `--include=dev` é necessário: com `NODE_ENV=production`, o npm deixaria de instalar o TypeScript e o Vite, que só são usados no build.
+
+Variáveis de ambiente do serviço:
+
+| Variável | Valor |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `JWT_SECRET` | segredo novo, com pelo menos 32 caracteres (não reaproveite o do ambiente local) |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | dados do banco (no TiDB Cloud, a porta é 4000) |
+| `DB_SSL` | `true` |
+| `TRUST_PROXY` | `1` (a confirmar no ambiente publicado) |
+
+O servidor não inicia sem um `JWT_SECRET` válido nem, em produção, sem `DB_HOST`. As migrações são aplicadas a partir de um computador com o `backend/.env` apontando para o banco de produção: `npm run db:migrate`.
 
 ## API
 
@@ -229,7 +254,7 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 - Não há recuperação de senha nem confirmação de e-mail. O cadastro avisa quando um e-mail já existe (`409`), o que permite descobrir contas; o limite de cadastros por IP reduz o abuso.
 - Depois de trocar a senha, os logins já abertos continuam valendo até o token expirar (até 15 minutos).
 - Os contadores do limite de tentativas ficam na memória do servidor: zeram quando ele reinicia e não são compartilhados entre várias instâncias.
-- A configuração de produção e a hospedagem ainda não foram definidas.
+- Na hospedagem gratuita, o site dorme depois de 15 minutos sem visitas, e a primeira visita seguinte leva cerca de 1 minuto para carregar.
 
 ## Licença
 
