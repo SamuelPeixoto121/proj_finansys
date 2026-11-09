@@ -465,7 +465,8 @@ button {
   letter-spacing: -0.3px;
 }
 
-.info-card > p {
+/* :where() zera a especificidade: classes próprias (.result-main, .eyebrow, mensagens) prevalecem. */
+:where(.info-card) > p {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.7;
