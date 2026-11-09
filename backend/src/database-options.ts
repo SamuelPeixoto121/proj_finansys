@@ -18,6 +18,11 @@ export const POOL_CONNECTION_LIMIT = 10;
 export const POOL_IDLE_TIMEOUT_MS = 60_000;
 export const POOL_MAX_IDLE = 5;
 
+// Datas sempre em UTC, qualquer que seja o fuso do servidor ou do banco: cada conexão
+// nova recebe este comando, e o mysql2 lê e grava as datas como UTC (timezone "Z").
+// Todas as colunas de data são TIMESTAMP, que o banco guarda internamente em UTC.
+export const SESSION_TIME_ZONE_SQL = "SET time_zone = '+00:00'";
+
 export function parseDatabaseSsl(value: string | undefined): boolean {
   const normalized = (value ?? "").trim().toLowerCase();
 
@@ -39,6 +44,7 @@ export function createPoolOptions(settings: DatabaseSettings): PoolOptions {
     maxIdle: POOL_MAX_IDLE,
     idleTimeout: POOL_IDLE_TIMEOUT_MS,
     enableKeepAlive: true,
+    timezone: "Z",
     // Com TLS, o certificado do servidor é sempre conferido contra as autoridades
     // conhecidas do Node; nenhum arquivo de certificado é necessário.
     ...(settings.ssl

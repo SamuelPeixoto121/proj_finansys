@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   POOL_CONNECTION_LIMIT,
+  SESSION_TIME_ZONE_SQL,
   createPoolOptions,
   parseDatabaseSsl,
   type DatabaseSettings,
@@ -65,4 +66,9 @@ test("o pool fecha conexões paradas bem antes dos 340 segundos do TiDB", () => 
   assert.ok((options.maxIdle ?? Infinity) < POOL_CONNECTION_LIMIT);
   assert.ok((options.idleTimeout ?? Infinity) <= 120_000);
   assert.equal(options.enableKeepAlive, true);
+});
+
+test("as datas são lidas e gravadas em UTC, com a sessão do banco também em UTC", () => {
+  assert.equal(createPoolOptions(settings).timezone, "Z");
+  assert.equal(SESSION_TIME_ZONE_SQL, "SET time_zone = '+00:00'");
 });
