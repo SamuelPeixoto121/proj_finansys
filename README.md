@@ -55,7 +55,9 @@ O frontend nunca acessa o banco de dados diretamente: ele conversa com a API, qu
 ```text
 proj_finansys/
 ├── package.json              scripts da raiz (workspaces)
+├── LICENSE                   licença MIT
 ├── backend/
+│   ├── .env.example          modelo das variáveis de ambiente
 │   ├── database/migrations/  migrações SQL (estrutura e dados iniciais)
 │   ├── src/
 │   │   ├── app.ts            montagem do Express e das rotas
@@ -63,11 +65,16 @@ proj_finansys/
 │   │   ├── config.ts         leitura das variáveis de ambiente
 │   │   ├── database.ts       conexão com o MySQL
 │   │   ├── migrate.ts        executor das migrações
-│   │   ├── domain/           regras puras (cálculo de crédito, faixas de juros)
-│   │   ├── middleware/       autenticação e permissão de administrador
-│   │   └── routes/           auth, modalities, simulations e rotas admin
-│   └── tests/                testes automatizados
+│   │   ├── domain/           regras puras: cálculo de crédito, faixas de juros,
+│   │   │                     regras da conta, conferência de senha, limite de
+│   │   │                     tentativas e consultas administrativas
+│   │   ├── middleware/       autenticação, permissão de administrador, limite
+│   │   │                     de tentativas, cabeçalhos de segurança e erros
+│   │   └── routes/           auth, account, modalities, simulations e rotas admin
+│   └── tests/                testes automatizados (com tsconfig.json próprio)
 └── frontend/
+    ├── index.html
+    ├── public/favicon.svg
     ├── css/styles.css
     └── src/                  App.tsx e main.tsx
 ```
@@ -221,3 +228,7 @@ Os testes cobrem o cálculo de crédito, a autenticação, o middleware de admin
 - Depois de trocar a senha, os logins já abertos continuam valendo até o token expirar (até 15 minutos).
 - Os contadores do limite de tentativas ficam na memória do servidor: zeram quando ele reinicia e não são compartilhados entre várias instâncias.
 - A configuração de produção e a hospedagem ainda não foram definidas.
+
+## Licença
+
+Distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).

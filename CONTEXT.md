@@ -41,7 +41,8 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 **Frontend**
 
 - `frontend/src/App.tsx`: login e cadastro, simulador, histórico, Minha conta e o painel administrativo, com as abas Modalidades (e faixas de juros), Usuários, Métricas e Auditoria.
-- `frontend/css/styles.css`: estilos e regras responsivas.
+- `frontend/css/styles.css`: estilos e regras responsivas. A cor de texto secundário é a variável `--muted` (`#5f6b7e`, escolhida pelo contraste); use a variável em vez de repetir a cor.
+- `frontend/public/favicon.svg`: ícone do site.
 - O Vite encaminha `/api` para `http://localhost:3000`.
 
 **Banco:** tabelas `users`, `credit_modalities`, `interest_rate_ranges`, `simulations`, `audit_logs` e `schema_migrations`. Modalidades iniciais de demonstração: `PERSONAL`, `VEHICLE` e `HOME`, cada uma com três faixas de juros fictícias.
@@ -63,12 +64,13 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 - Endurecimento da API: erros sempre em JSON e sem stack trace (`400`, `413`, `500` genérico), corpo limitado a 10 KB, cabeçalhos de segurança e login com o mesmo tempo de resposta quando o e-mail não existe.
 - Edição da conta: `PATCH /auth/me` (nome) e `PATCH /auth/me/password` (exige a senha atual; limite de 5 erros por usuário a cada 15 minutos), com os formulários em Minha conta. E-mail e papel não são editáveis.
 - 113 testes automatizados passando no backend.
+- Revisão final do código (09/11/2026): `npm audit` sem vulnerabilidades, contraste dos textos melhorado, favicon, aviso de projeto educacional (taxas fictícias) no login, no simulador e no rodapé, mensagens de falha de conexão pensadas para o visitante (não para o desenvolvedor), detalhes da auditoria traduzidos, README atualizado e licença MIT (`LICENSE`).
 
 **Pendente, em ordem sugerida**
 
 Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
 
-1. Revisão final: telas, textos, documentação e conferência geral. Nessa hora, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
+1. Conferência visual: abrir o site e passar por todas as telas (login, cadastro, simulador, histórico e comparação, Minha conta e as abas do admin), também em largura de celular. Depois disso, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
 2. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
 
 Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-mail) e recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
