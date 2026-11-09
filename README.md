@@ -48,7 +48,7 @@ Frontend React  ──►  API REST (Express)  ──►  MySQL
  e resultados          de negócio, permissões   taxas, simulações, auditoria
 ```
 
-O frontend nunca acessa o banco de dados diretamente: ele conversa com a API, que valida os dados, confere a identidade e as permissões do usuário e só então consulta o banco. A API usa o prefixo `/api/v1/`. Em desenvolvimento, o Vite encaminha as chamadas `/api` para o backend, na porta 3000.
+O frontend nunca acessa o banco de dados diretamente: ele conversa com a API, que valida os dados, confere a identidade e as permissões do usuário e só então consulta o banco. A API usa o prefixo `/api/v1/`. Em desenvolvimento, o Vite encaminha as chamadas `/api` para o backend, na porta 3000. Em produção (`NODE_ENV=production`), o próprio backend entrega o site compilado em `frontend/dist`, e tudo funciona num único endereço.
 
 ## Estrutura de pastas
 

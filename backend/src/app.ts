@@ -1,4 +1,5 @@
 import express from "express";
+import { createFrontendRouter, DEFAULT_FRONTEND_DIR } from "./frontend.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { securityHeaders } from "./middleware/security-headers.js";
 import {
@@ -42,6 +43,11 @@ app.use(simulationsRouter);
 app.use(adminModalitiesRouter);
 app.use(adminRateRangesRouter);
 app.use(adminReportsRouter);
+
+// Em produção, a própria API entrega o site compilado (um só endereço, sem o proxy do Vite).
+if (process.env.NODE_ENV === "production") {
+  app.use(createFrontendRouter(DEFAULT_FRONTEND_DIR));
+}
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Rota não encontrada." });
