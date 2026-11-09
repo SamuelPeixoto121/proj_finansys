@@ -82,13 +82,13 @@ A conferência visual foi feita em 09/11/2026 (todas as telas, em computador e c
 3. ~~Migrações e testes no TiDB~~ (feito em 09/11/2026): as duas migrações aplicadas (6 tabelas, 3 modalidades, 9 faixas). Chaves estrangeiras ligadas e com `RESTRICT` funcionando. `tidb_enable_check_constraint` está `OFF`: o banco aceita as restrições `CHECK` sem aplicá-las, e a validação fica só na API. O fuso do banco é UTC. O site completo (cadastro, login, simulação, histórico) funcionou ligado ao TiDB, e depois de 400 s sem acesso o pool abriu uma conexão nova sem erro. O banco foi deixado sem dados de teste.
 4. ~~Publicar na Render~~ (feito em 09/11/2026): serviço web gratuito na região **Virginia (US East)**, com as variáveis da seção "Publicação" do README. Testado no ar: rotas, cabeçalhos, `http` redirecionando para `https`, cadastro, login, simulações, histórico, comparação, sessão ao recarregar, celular e datas no horário de Brasília. Tempos medidos: cadastro 4,1 s, login 3,6 s e simulação de 1,0 a 1,4 s. O banco de produção foi deixado sem dados de teste.
    - `TRUST_PROXY`: com `1`, o app via o IP de dois proxies internos da Render que se alternavam (os limites por IP valeriam para todos os visitantes juntos). Com `2`, o IP visto muda a cada requisição (limite por IP praticamente desligado, sem bloquear ninguém por engano). Nos dois casos, um `X-Forwarded-For` forjado foi ignorado. Ficou `2`, por decisão do usuário, para terminar o projeto. A documentação da Render sobre isso não foi encontrada.
+   - Conta de administrador do site publicado: a conta do usuário (cadastrada pelo site) foi promovida a `ADMIN` no TiDB, e a aba Administração apareceu depois de sair e entrar de novo.
 
 **Melhorias futuras possíveis (não planejadas)**
 
 - Descobrir o IP real do visitante na Render: uma rota de diagnóstico temporária, ligada por variável de ambiente, para ver os cabeçalhos que chegam ao app (`X-Forwarded-For` completo, `CF-Connecting-IP`, `X-Real-IP`) e então ajustar o `TRUST_PROXY` ou ler o cabeçalho certo.
 - Login e cadastro mais rápidos no ar: baixar o custo do bcrypt de 12 para 10 (cerca de 4 vezes mais rápido; não foi medido no servidor se o bcrypt é mesmo a causa).
 - Banco mais perto da Render: recriar o cluster do TiDB em `us-east-1`, exportando e importando os dados.
-- Criar a conta de administrador do site publicado: cadastrar pelo site e promover no TiDB com `UPDATE users SET role = 'ADMIN' WHERE email = '...';`.
 
 Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-mail) e recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
 
