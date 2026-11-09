@@ -70,8 +70,14 @@ Verificações antes de cada commit: `npm test`, `npm run typecheck`, `npm run b
 
 Decidido com o usuário: terminar as funcionalidades primeiro e só depois escolher a hospedagem.
 
-1. Conferência visual: abrir o site e passar por todas as telas (login, cadastro, simulador, histórico e comparação, Minha conta e as abas do admin), também em largura de celular. Depois disso, avisar o usuário de que o projeto está pronto para decidir a hospedagem.
-2. Publicação. Pesquisa feita em 30/10/2026, a reconfirmar nos sites na hora: banco MySQL gratuito no Aiven (1 GB, exige TLS, pode ser desligado por falta de uso, sem garantia de disponibilidade) e API com o site compilado na Render (o plano gratuito dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar; cerca de US$ 7 por mês para ficar sempre ligado). Railway, Fly.io e Cloud Run foram descartados (sem plano gratuito útil ou exigem cartão). O código ainda precisa de: conexão com o banco usando TLS, o backend servindo o site compilado, scripts de build e de início, e a configuração de `NODE_ENV`, `TRUST_PROXY` e das variáveis do banco.
+A conferência visual foi feita em 09/11/2026 (todas as telas, em computador e celular); ela achou e corrigiu o resultado da simulação sem destaque (regra `.info-card > p` passando por cima das classes próprias).
+
+**Hospedagem decidida: gratuita.** Banco no **TiDB Cloud** (plano gratuito, compatível com MySQL) e API com o site compilado na **Render** (plano gratuito: dorme após 15 minutos sem visitas e leva cerca de 1 minuto para voltar). O que a documentação do TiDB diz: conta sem cartão; 5 GiB e 50 milhões de unidades de uso por mês (se a cota acabar, recusa conexões até o mês virar); TLS obrigatório no endereço público, porta 4000, com certificado reconhecido pelo Node sem arquivo extra; conexões paradas caem depois de cerca de 340 segundos. Não confirmado: se o banco "dorme" e quanto demora para voltar, e a compatibilidade completa. Plano B: MySQL pago, cerca de US$ 11 a 15 por mês. Aiven, Railway, Fly.io e Cloud Run foram descartados.
+
+1. Preparar o código para produção, uma etapa por vez, cada uma com testes e commit: TLS opcional por variável de ambiente; renovação das conexões do pool antes dos 340 segundos; o backend entregando o site compilado; scripts de build e de início; configuração de `NODE_ENV` e `TRUST_PROXY`.
+2. O usuário cria a conta no TiDB e pega host, usuário e senha. A senha fica só no `backend/.env` local e nas variáveis da Render, nunca no chat nem no Git.
+3. Rodar as migrações e testar no TiDB de verdade. Pontos de atenção: as restrições `CHECK` das migrações (o TiDB pode aceitá-las sem aplicá-las, mas a API já valida os mesmos dados) e as chaves estrangeiras com `RESTRICT`.
+4. Publicar na Render e testar o site no ar.
 
 Fora do escopo, por decisão: mudança de e-mail (exigiria confirmação por e-mail) e recuperação de senha por e-mail (exigiria um serviço de envio de e-mails, e o projeto é educacional).
 
