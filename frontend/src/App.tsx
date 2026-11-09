@@ -629,8 +629,7 @@ export default function App() {
     const token = sessionStorage.getItem(TOKEN_KEY);
 
     if (!token) {
-      handleLogout();
-      setError("Sua sessão expirou. Entre novamente.");
+      handleSessionExpired();
       return;
     }
 
@@ -681,8 +680,7 @@ export default function App() {
       });
 
       if (response.status === 401) {
-        handleLogout();
-        setError("Sua sessão expirou. Entre novamente.");
+        handleSessionExpired();
         return;
       }
 
@@ -796,9 +794,6 @@ export default function App() {
       catalogStaleRef.current = true;
       resetAdminForm();
       await loadAdminModalities();
-      if (adminEditingCode === null) {
-        // A criação não cria taxas; a mensagem da API explica o próximo passo.
-      }
     } catch (err) {
       setAdminError(err instanceof Error ? err.message : "Não foi possível salvar a modalidade.");
     }
